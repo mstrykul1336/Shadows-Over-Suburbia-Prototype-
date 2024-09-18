@@ -1,6 +1,4 @@
 # Shadows Over Suburbia Prototype 
- 
-
 9/17/24:
 Tasks: 
 - Figure out which multiplayer engine to use. (Unity or Proton? More than likely Proton, but I will be watching a beginner's video to Unity multiplayer to see if I like it. This is the video: https://youtu.be/E9eHefMpVnM?si=_1fXScONaJZOLwzG) 
