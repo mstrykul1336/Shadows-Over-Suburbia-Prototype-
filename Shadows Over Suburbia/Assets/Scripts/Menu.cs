@@ -18,6 +18,7 @@ public class Menu : MonoBehaviourPunCallbacks, ILobbyCallbacks
     [Header("Main Screen")]
     public Button createRoomButton;
     public Button findRoomButton;
+    public TMP_InputField playerNameInput;
 
     [Header("Lobby")]
     public TextMeshProUGUI playerListText;

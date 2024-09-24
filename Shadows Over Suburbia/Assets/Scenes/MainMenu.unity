@@ -330,7 +330,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0cd44c1031e13a943bb63640046fad76, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_UiScaleMode: 0
+  m_UiScaleMode: 1
   m_ReferencePixelsPerUnit: 100
   m_ScaleFactor: 1
   m_ReferenceResolution: {x: 800, y: 600}
@@ -1731,7 +1731,7 @@ MonoBehaviour:
   m_OnValueChanged:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 0}
+      - m_Target: {fileID: 1726343089}
         m_TargetAssemblyTypeName: Menu, Assembly-CSharp
         m_MethodName: OnPlayerNameValueChanged
         m_Mode: 2
@@ -4135,7 +4135,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 28c66bf4d044f7f4bbb429e0e7dde5b9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  maxPlayers: 4
+  maxPlayers: 10
 --- !u!4 &1276364038
 Transform:
   m_ObjectHideFlags: 0
@@ -6117,6 +6117,7 @@ MonoBehaviour:
   titleScreen: {fileID: 433552248}
   createRoomButton: {fileID: 309796815}
   findRoomButton: {fileID: 130234852}
+  playerNameInput: {fileID: 428062689}
   playerListText: {fileID: 64824636}
   roomInfoText: {fileID: 1408725385}
   startGameButton: {fileID: 1306976662}

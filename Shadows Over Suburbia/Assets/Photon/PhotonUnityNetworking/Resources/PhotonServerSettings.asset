@@ -42,6 +42,15 @@ MonoBehaviour:
   - RespawnSpaceship
   - UpdateHealthBar
   - UpdateLobbyUI
+  - ImInGame
+  - ReceiveRole
+  - Log
+  - Start
+  - SpawnPlayer
+  - Initialize
+  - ReceiveRoleandAlignment
+  - ReceiveVote
+  - UpdatePosition
   DisableAutoOpenWizard: 1
   ShowSettings: 0
   DevRegionSetOnce: 1
