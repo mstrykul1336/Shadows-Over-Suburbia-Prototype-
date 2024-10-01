@@ -226,6 +226,11 @@ public class FirstPersonController : MonoBehaviourPun
     }
 
     float camRotation;
+    [PunRPC]
+    public void UpdatePosition(Vector3 newPosition)
+    {
+        transform.position = newPosition;
+    }
 
     private void Update()
     {

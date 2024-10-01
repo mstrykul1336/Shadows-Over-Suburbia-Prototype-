@@ -13,9 +13,9 @@ public class RoleAssigner : MonoBehaviourPunCallbacks
         Mayor,
         Assistant,
         Baker,
-        Hacker,
+        Medic,
         Villager,
-        Assassin,
+        Detective,
         OldMan,
         Clairvoyant
     }
@@ -54,9 +54,9 @@ public class RoleAssigner : MonoBehaviourPunCallbacks
         {
             Role.Assistant,
             Role.Baker,
-            Role.Hacker,
+            Role.Medic,
             Role.Villager,
-            Role.Assassin,
+            Role.Detective,
             Role.OldMan,
             Role.Clairvoyant
         };
@@ -71,13 +71,13 @@ public class RoleAssigner : MonoBehaviourPunCallbacks
         else if (totalPlayers == 5)
         {
             roles.Add(Role.Baker);
-            roles.Add(Role.Hacker);
+            roles.Add(Role.Medic);
         }
         else if (totalPlayers >= 6)
         {
-            roles.Add(Role.Assassin);
+            roles.Add(Role.Detective);
             roles.Add(Role.Baker);
-            roles.Add(Role.Hacker);
+            roles.Add(Role.Medic);
         }
 
         // Fill remaining spots with random roles excluding Mayor
