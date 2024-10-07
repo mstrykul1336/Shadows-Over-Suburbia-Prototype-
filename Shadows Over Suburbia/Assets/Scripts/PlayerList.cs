@@ -50,7 +50,7 @@ public class PlayerList : MonoBehaviourPunCallbacks
             string displayName = player.NickName;
 
             // Check if the player is the Mayor and add the special character
-            if (RoleAssigner.playerRoles.TryGetValue(player.ActorNumber, out RoleAssigner.Role role) && role == RoleAssigner.Role.Mayor)
+            if (GameManager.playerRoles.TryGetValue(player.ActorNumber, out GameManager.Role role) && role == GameManager.Role.Mayor)
             {
                 displayName += " \u2605"; // Use your special character here
             }

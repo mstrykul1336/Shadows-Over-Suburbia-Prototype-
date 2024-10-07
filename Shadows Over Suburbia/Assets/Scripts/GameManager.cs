@@ -7,6 +7,7 @@ using Photon.Realtime;
 using TMPro;
 using UnityEngine.UI;
 using System;
+using UnityEngine.SceneManagement;
 
 public class GameManager : MonoBehaviourPun
 {
@@ -15,12 +16,13 @@ public class GameManager : MonoBehaviourPun
     public Transform[] spawnPoints;
     private int playersInGame;
     public static GameManager instance;
-    public float timerDuration = 15f;
+    public float timerDuration = 5f;
     public TextMeshProUGUI timerText;
     public float timeRemaining;
     public PlayerController[] players;
     public float postGameTime = 20f;
-    
+    public float firstDayTimeRemaining = 30f;
+
 
 
     private bool votingActive = false; 
@@ -35,13 +37,37 @@ public class GameManager : MonoBehaviourPun
 
     public Transform[] spawnPointsNight;
     private bool isNightCycle = false; 
-    public GameObject nightOptionsCanvasPrefab; 
-    private GameObject nightOptionsCanvas;
+   // public GameObject nightOptionsCanvasPrefab; 
+    //private GameObject nightOptionsCanvas;
     //public PlayerAttackUI playerattackUI;
-    public List<GameObject> playerObjects = new List<GameObject>();
+    //public List<GameObject> playerObjects = new List<GameObject>();
 
     public TextMeshProUGUI winMessageText;
     public TextMeshProUGUI deathMessageText; 
+    public int DayCycles = 0;
+    public TextMeshProUGUI dayText;
+
+    public enum Role
+    {
+        Mayor,
+        Assistant,
+        Baker,
+        Medic,
+        Villager,
+        Detective,
+        OldMan,
+        Clairvoyant
+    }
+    public enum Alignment
+    {
+        Destructive, 
+        Helpful
+    }
+    public static Dictionary<int, Role> playerRoles = new Dictionary<int, Role>();
+    public static Dictionary<int, Alignment> playerAlignments = new Dictionary<int, Alignment>();
+
+    private int totalPlayers;
+    public GameObject playerCanvasPrefab;
 
 
     
@@ -58,6 +84,12 @@ public class GameManager : MonoBehaviourPun
         photonView.RPC("ImInGame", RpcTarget.AllBuffered);
         votes = new int[players.Length];
         hasVoted = new bool[PhotonNetwork.PlayerList.Length];
+        UpdateDayText();
+        if (PhotonNetwork.IsMasterClient)
+        {
+            AssignRoles();
+        }
+        //UpdatePlayerList();
     }
 
 
@@ -76,31 +108,19 @@ public class GameManager : MonoBehaviourPun
     }
     
    
-    void SpawnPlayer()
+    public void SpawnPlayer()
     {
         GameObject playerObj = PhotonNetwork.Instantiate(playerPrefabPath, spawnPoints[UnityEngine.Random.Range(0, spawnPoints.Length)].position, Quaternion.identity);
         Debug.Log("Spawning player.");
         //playerObjects[PhotonNetwork.LocalPlayer.ActorNumber] = playerObj;
        // playerObj.name = $"Player_{PhotonNetwork.LocalPlayer.ActorNumber}";
         //PhotonNetwork.LocalPlayer.TagObject = playerObj;
-        playerObjects.Add(playerObj);
-        playerObj.name = $"Player_{PhotonNetwork.LocalPlayer.ActorNumber}"; 
+       // playerObjects.Add(playerObj);
+        //playerObj.name = $"Player_{PhotonNetwork.LocalPlayer.ActorNumber}"; 
         // initialize the player
-        playerObj.GetComponent<PhotonView>().RPC("Initialize", RpcTarget.All, PhotonNetwork.LocalPlayer);
+        playerObj.GetComponent<PlayerController>().photonView.RPC("Initialize", RpcTarget.All, PhotonNetwork.LocalPlayer);
     }
 
-    GameObject GetPlayerObject(int index)
-    {
-        if (index >= 0 && index < playerObjects.Count)
-        {
-            return playerObjects[index]; // Access player by index
-        }
-        else
-        {
-            Debug.LogError($"Player at index {index} not found.");
-            return null; // Return null if index is out of range
-        }
-    }
 
     public PlayerController GetPlayer(int playerId)
     {
@@ -122,12 +142,163 @@ public class GameManager : MonoBehaviourPun
         return null;
     }
 
+    private void AssignRoles()
+    {
+        totalPlayers = PhotonNetwork.CurrentRoom.PlayerCount;
+
+        if (totalPlayers < 1)
+        {
+            Debug.Log("There are not enough players for this game.");
+            SceneManager.LoadScene(sceneBuildIndex: 1);
+        }
+
+        // Create a list of available roles, excluding Mayor
+        List<Role> availableRoles = new List<Role>
+        {
+            Role.Assistant,
+            Role.Baker,
+            Role.Medic,
+            Role.Villager,
+            Role.Detective,
+            Role.OldMan,
+            Role.Clairvoyant
+        };
+
+        // Prepare the list of roles to assign (Mayor is always added)
+        List<Role> roles = new List<Role> { Role.Mayor };
+
+        if (totalPlayers == 4)
+        {
+            roles.Add(Role.Baker);
+        }
+        else if (totalPlayers == 5)
+        {
+            roles.Add(Role.Baker);
+            roles.Add(Role.Medic);
+        }
+        else if (totalPlayers >= 6)
+        {
+            roles.Add(Role.Detective);
+            roles.Add(Role.Baker);
+            roles.Add(Role.Medic);
+        }
+
+        // Fill remaining spots with random roles excluding Mayor
+        for (int i = roles.Count; i < totalPlayers; i++)
+        {
+            // Ensure roles are random and unique
+            if (availableRoles.Count > 0)
+            {
+                // Pick a random role from the available list
+                int randomIndex = UnityEngine.Random.Range(0, availableRoles.Count);
+                Role randomRole = availableRoles[randomIndex];
+                roles.Add(randomRole);
+                availableRoles.RemoveAt(randomIndex); // Remove to avoid duplication
+            }
+            else
+            {
+                // Default to Villager if we've run out of unique roles
+                roles.Add(Role.Villager);
+            }
+        }
+
+        Shuffle(roles); // Shuffle the roles to randomize assignments
+
+        // Assign the roles to the players
+        foreach (var player in PhotonNetwork.CurrentRoom.Players)
+        {
+            int playerId = player.Key;
+            Role assignedRole = roles[playerId - 1]; 
+            Alignment randomAlignment = RandomizeAlignment();
+
+            playerRoles[playerId] = assignedRole;
+            playerAlignments[playerId] = randomAlignment;
+
+            // Send the role to the player
+            photonView.RPC("ReceiveRoleandAlignment", player.Value, assignedRole, randomAlignment);
+        }
+    }
+
+  
+    private void Shuffle(List<Role> roles)
+    {
+        for (int i = 0; i < roles.Count; i++)
+        {
+            Role temp = roles[i];
+            int randomIndex = UnityEngine.Random.Range(i, roles.Count);
+            roles[i] = roles[randomIndex];
+            roles[randomIndex] = temp;
+        }
+    }
+
+    private Alignment RandomizeAlignment()
+    {
+        int randomValue = UnityEngine.Random.Range(0, 2); // 0 or 1
+        return (randomValue == 0) ? Alignment.Destructive : Alignment.Helpful;
+    }
+
+    [PunRPC]
+    private void ReceiveRoleandAlignment(Role role, Alignment alignment)
+    {
+        Debug.Log($"Assigned Role: {role}, Alignment: {alignment}");
+        CreatePlayerCanvas(role, alignment);
+
+        // Notify the PlayerController about the role and alignment
+        // GameObject playerControllerObj = PhotonNetwork.LocalPlayer.TagObject as GameObject;
+        // PlayerController playerController = playerControllerObj?.GetComponent<PlayerController>();
+        // // PlayerController playerController = GetComponent<PlayerController>();
+        // if (playerController != null)
+        // {
+        //     playerController.SetRoleAndAlignment(role, alignment);
+        // }
+        //PlayerController playerController = GetComponent<PlayerController>();
+        foreach (PlayerController player in players)
+        {
+            if (player != null)
+            {
+                Debug.Log($"Setting role and alignment for player: {player.photonPlayer.NickName}");
+                player.SetRoleAndAlignment(role, alignment);
+            }
+        }
+        
+        
+    }
+
+    private void CreatePlayerCanvas(Role role, Alignment alignment)
+    {
+        GameObject playerCanvas = Instantiate(playerCanvasPrefab);
+        playerCanvas.transform.SetParent(PhotonNetwork.LocalPlayer.TagObject as Transform, false);
+
+        TextMeshProUGUI roleText = playerCanvas.GetComponentInChildren<TextMeshProUGUI>();
+        if (roleText != null)
+        {
+            roleText.text = $"Your Role: {role}";
+            if (alignment == Alignment.Destructive)
+            {
+                roleText.color = Color.red;
+            }
+            else
+            {
+                roleText.color = Color.green;
+            }
+        }
+
+    }
+
     // public override void OnPlayerEnteredRoom(Player newPlayer)
     // {
     //     Debug.Log($"{newPlayer.NickName} has entered the room.");
     //     photonView.RPC("ImInGame", RpcTarget.AllBuffered);
     // }
 
+
+    void UpdateDayText()
+    {
+        if (dayText != null)
+        {
+            dayText.text = $"Day {DayCycles}"; // Update the text to show current day
+        }
+    }
     void Update()
     {
          // Only update the timer if voting is active
@@ -135,7 +306,23 @@ public class GameManager : MonoBehaviourPun
         {
             return; // Skip updates during night cycle
         }
+        if (DayCycles == 0)
+        {
+            // Start the night cycle after 30 seconds
+            if (firstDayTimeRemaining > 0)
+            {
+                firstDayTimeRemaining -= Time.deltaTime; // Decrease the first day timer
+                timerText.text = $"{firstDayTimeRemaining:F2} seconds until night cycle"; 
+            }
+            else 
+            {
+                Debug.Log("30 seconds elapsed. Starting night cycle.");
+                StartNightCycle(); // Start night cycle after 30 seconds
+            }
+            return;
+        }
 
+        // Continue with regular voting logic
         if (timeRemaining > 0)
         {
             timeRemaining -= Time.deltaTime;
@@ -146,9 +333,25 @@ public class GameManager : MonoBehaviourPun
             Debug.Log("Time is up! Start voting!");
             StartVoting();
         }
+
+        // if (timeRemaining > 0)
+        // {
+        //     timeRemaining -= Time.deltaTime;
+        //     timerText.text = $"{timeRemaining:F2}";
+        // }
+        // else if (!votingActive)
+        // {
+        //     Debug.Log("Time is up! Start voting!");
+        //     StartVoting();
+        // }
     }
     void StartVoting()
     {
+        if (DayCycles == 0)
+        {
+            Debug.Log("Voting cannot start on the first day cycle.");
+            return;
+        }
         if (!votingActive)
         {
             votingActive = true; 
@@ -172,8 +375,7 @@ public class GameManager : MonoBehaviourPun
                 CreateVotingCanvas();
             }
 
-            // Start a delayed call to make some time for votes
-            Invoke(nameof(EndVoting), 15f);
+            StartCoroutine(VotingDelay());
         }
     }
     void CreateVotingCanvas()
@@ -269,7 +471,7 @@ public class GameManager : MonoBehaviourPun
 
     void UpdatePlayerList()
     {
-        players = new PlayerController[PhotonNetwork.PlayerList.Length]; // Refresh player list
+        players = new PlayerController[PhotonNetwork.PlayerList.Length]; 
     }
 
     void EndVoting()
@@ -303,6 +505,14 @@ public class GameManager : MonoBehaviourPun
     // Reset for next voting session
         //ResetForNextVoting();
     }
+    private IEnumerator VotingDelay()
+    {
+        // Wait for 30 seconds
+        yield return new WaitForSeconds(30f);
+        
+        // After the delay, call EndVoting
+        EndVoting();
+    }
 
     public void StartNightCycle()
     {
@@ -316,68 +526,30 @@ public class GameManager : MonoBehaviourPun
             playerVotingCanvas = null;
         }
         roleRevealText.text = "";
-        Vector3 canvasPosition = new Vector3(0, 0, 0); 
-        Quaternion canvasRotation = Quaternion.identity;
-        nightOptionsCanvas = PhotonNetwork.Instantiate(nightOptionsCanvasPrefab.name,canvasPosition, canvasRotation, 0 );
-        nightOptionsCanvas.transform.SetParent(PhotonNetwork.LocalPlayer.TagObject as Transform, false);
+        // Vector3 canvasPosition = new Vector3(0, 0, 0); 
+        // Quaternion canvasRotation = Quaternion.identity;
+        // nightOptionsCanvas = PhotonNetwork.Instantiate(nightOptionsCanvasPrefab.name,canvasPosition, canvasRotation, 0 );
+        // nightOptionsCanvas.transform.SetParent(PhotonNetwork.LocalPlayer.TagObject as Transform, false);
         // AttackManager attackManager = GetComponent<AttackManager>();
         // if (attackManager == null)
         // {
         //     Debug.LogError("AttackManager component not found on this GameObject.");
         //     return; // Exit if AttackManager is not found
         // }
-        foreach (var player in PhotonNetwork.PlayerList)
+        foreach (PlayerController player in players)
         {
-            PlayerController controller = GetComponent<PlayerController>();
-            AttackManager attackManager = GetComponent<AttackManager>();
-            attackManager.SetupPlayerUI(controller);
-            // int playerIndex = player.ActorNumber - 1; // Assuming ActorNumber starts from 1
-            // GameObject playerObject = GetPlayerObject(playerIndex);
-            // if (playerObject != null)
+            // if (player != null)
+            player.NightUI();
+            // if (photonView.IsMine)
             // {
-            //     PlayerController controller = playerObject.GetComponent<PlayerController>();
-            //     AttackManager attackManager = GetComponent<AttackManager>();
-            //     attackManager.SetupPlayerUI(controller);
+            //     player.NightUI();
             // }
-            // else
-            // {
-            //     Debug.Log($"Error: Could not find GameObject for player {player.ActorNumber}");
-            // }
-            //GameObject playerObject = player.TagObject as GameObject; // Get the player's GameObject
-            // if (playerObject != null)
-            // {
-            //     // PlayerController controller = playerObject.GetComponent<PlayerController>();
-            //     // AttackManager attackManager = GetComponent<AttackManager>();
-            //     // attackManager.SetupPlayerUI(controller); // Setup UI for each player
-            //     PlayerController controller = playerObject.GetComponent<PlayerController>();
-            //     if (controller != null)
-            //     {
-            //         attackManager.SetupPlayerUI(controller); // Setup UI for each player
-            //     }
-            //     else
-            //     {
-            //         Debug.LogError($"PlayerController not found for player {player.NickName} (#{player.ActorNumber})");
-            //     }
-            // }
-            // else
-            // {
-            //     Debug.LogError($"Player {player.NickName} (#{player.ActorNumber}) has a null TagObject.");
-            // }
-            // if (playerObjects.TryGetValue(player.ActorNumber, out GameObject playerObject))
-            // {
-            //     PlayerController controller = playerObject.GetComponent<PlayerController>();
-            //     AttackManager attackManager = GetComponent<AttackManager>();
-            //     attackManager.SetupPlayerUI(controller); // Setup UI for each player
-            // }
-            // else
-            // {
-            //     Debug.LogError($"Player {player.ActorNumber} not found in playerObjects.");
-            // }
-            
+            // var Playercontroller = GetComponent<PlayerController>();
+           
         }
         
         var localPlayer = FindObjectOfType<FirstPersonController>();
-        if (localPlayer != null)
+        if (localPlayer != null )
         {
             localPlayer.DisablePlayerControls();
         }
@@ -389,17 +561,27 @@ public class GameManager : MonoBehaviourPun
     void StartDayCycle()
     {
         isNightCycle = false;
+        DayCycles += 1;
+        UpdateDayText();
         var localPlayer = FindObjectOfType<FirstPersonController>();
         if (localPlayer != null)
         {
             localPlayer.EnablePlayerControls();
         }
-        if (nightOptionsCanvas != null)
+        // if (nightOptionsCanvas != null)
+        // {
+        //     PlayerAttackUI playerAttackUI = nightOptionsCanvas.GetComponent<PlayerAttackUI>();
+        //     if (playerAttackUI != null)
+        //     {
+        //         playerAttackUI.gameObject.SetActive(false); // Hide Attack UI
+        //     }
+        // }
+        foreach (PlayerController player in players)
         {
-            PlayerAttackUI playerAttackUI = nightOptionsCanvas.GetComponent<PlayerAttackUI>();
-            if (playerAttackUI != null)
+            if (photonView.IsMine && player != null)
             {
-                playerAttackUI.gameObject.SetActive(false); // Hide Attack UI
+                player.NightUIOff();
+                player.GiveGold();
             }
         }
         SpawnDayPlayers();
@@ -465,34 +647,94 @@ public class GameManager : MonoBehaviourPun
         if (votesProcessed)
             return;
         int maxVotes = 0;
-        votedOutPlayerIndex = -1;
+        // votedOutPlayerIndex = -1;
+
+        // for (int i = 0; i < votes.Length; i++)
+        // {
+        //     if (votes[i] > maxVotes)
+        //     {
+        //         maxVotes = votes[i];
+        //         votedOutPlayerIndex = i;
+        //     }
+        // }
+
+        // if (maxVotes > 0) // If there were any votes
+        // {
+        //     Debug.Log($"Player {votedOutPlayerIndex} has been voted out with {maxVotes} votes!");
+        //     RevealRoleAndRemovePlayer(votedOutPlayerIndex);
+        // }
+        List<int> potentialWinners = new List<int>();
 
         for (int i = 0; i < votes.Length; i++)
         {
             if (votes[i] > maxVotes)
             {
                 maxVotes = votes[i];
-                votedOutPlayerIndex = i;
+                potentialWinners.Clear(); // Clear previous winners
+                potentialWinners.Add(i); // Add new winner
+            }
+            else if (votes[i] == maxVotes && maxVotes > 0)
+            {
+                potentialWinners.Add(i); // Tie found
             }
         }
 
-        if (maxVotes > 0) // If there were any votes
+        // Handle results based on the number of potential winners
+        if (potentialWinners.Count == 1)
         {
+            votedOutPlayerIndex = potentialWinners[0];
             Debug.Log($"Player {votedOutPlayerIndex} has been voted out with {maxVotes} votes!");
-            RevealRoleAndRemovePlayer(votedOutPlayerIndex);
+            StartCoroutine(EliminationDelay());
         }
-        CheckWinCondition();
+        else if (potentialWinners.Count > 1)
+        {
+            Debug.Log("Tie detected, restarting voting.");
+            ResetForNextVoting(); // Reset to allow for a new vote
+            StartVoting(); // Start a new voting session
+        }
+
+        //CheckWinCondition();
         votesProcessed = true;
 
     }
+
+    private IEnumerator EliminationDelay()
+    {
+        // Wait for a specified duration (e.g., 3 seconds)
+        yield return new WaitForSeconds(5f);
+        
+        // Reveal role and remove player after delay
+        RevealRoleAndRemovePlayer(votedOutPlayerIndex);
+    }
+    
     void RevealRoleAndRemovePlayer(int playerIndex)
     {
         Debug.Log("Revealing player and role");
         PlayerController targetPlayer = players[playerIndex];
         // Here you need to get the role of the player and display it
-        string role = players[playerIndex].GetRole(); 
-        roleRevealText.text = $"Player {playerIndex + 1} was voted out! Their role was: {role}";
-        PhotonNetwork.Destroy(targetPlayer.gameObject);
+        if (targetPlayer != null)
+        {
+            // Get the player's role and display it
+            string role = targetPlayer.GetRole();
+            roleRevealText.text = $"Player {playerIndex + 1} was voted out! Their role was: {role}";
+
+            // Only the Master Client can destroy and disconnect players
+            if (PhotonNetwork.IsMasterClient)
+            {
+                // Destroy the player's GameObject across the network
+                PhotonNetwork.Destroy(targetPlayer.gameObject);
+
+                // Get the PhotonPlayer object associated with the player
+                Photon.Realtime.Player photonPlayer = targetPlayer.photonView.Owner;
+
+                // Forcefully disconnect the player if they are still connected
+                if (photonPlayer != null)
+                {
+                    PhotonNetwork.CloseConnection(photonPlayer);
+                    Debug.Log("Player " + photonPlayer.NickName + " has been forcefully disconnected.");
+                }
+            }
+        }
        
     }
     public void NotifyPlayerDeath(int playerId)
@@ -518,9 +760,26 @@ public class GameManager : MonoBehaviourPun
             deathMessageText.gameObject.SetActive(false); // Hide the message
         }
         var playerController = GetPlayer(playerId);
+
         if (playerController != null)
         {
-            PhotonNetwork.Destroy(playerController.gameObject);
+            // Check if the current client is the Master Client
+            if (PhotonNetwork.IsMasterClient)
+            {
+                // Check if the current client is not the owner of the PhotonView
+                if (!playerController.photonView.IsMine)
+                {
+                    // Take ownership of the PhotonView if the original owner has left
+                    playerController.photonView.TransferOwnership(PhotonNetwork.LocalPlayer);
+                }
+
+                // Now destroy the object since the Master Client has ownership
+                PhotonNetwork.Destroy(playerController.gameObject);
+            }
+            else
+            {
+                Debug.LogError("Only the Master Client can destroy players' GameObjects.");
+            }
         }
     }
 
@@ -528,14 +787,14 @@ public class GameManager : MonoBehaviourPun
     [PunRPC]
     void WinGame(int winningSide)
     {
-        if (winningSide == (int)RoleAssigner.Alignment.Helpful)
+        if (winningSide == (int)GameManager.Alignment.Helpful)
         {
             // Handle Helpful win (e.g., show a message, transition to end screen)
             Debug.Log("Helpful side has won!");
             winMessageText.text = "Helpful won!";
 
         }
-        else if (winningSide == (int)RoleAssigner.Alignment.Destructive)
+        else if (winningSide == (int)GameManager.Alignment.Destructive)
         {
             // Handle Destructive win (e.g., show a message, transition to end screen)
             Debug.Log("Destructive side has won!");
@@ -557,13 +816,13 @@ public class GameManager : MonoBehaviourPun
 
         foreach (var player in PhotonNetwork.PlayerList)
         {
-            if (RoleAssigner.playerAlignments.TryGetValue(player.ActorNumber, out RoleAssigner.Alignment alignment))
+            if (GameManager.playerAlignments.TryGetValue(player.ActorNumber, out GameManager.Alignment alignment))
             {
-                if (alignment == RoleAssigner.Alignment.Helpful)
+                if (alignment == GameManager.Alignment.Helpful)
                 {
                     hasHelpful = true;
                 }
-                else if (alignment == RoleAssigner.Alignment.Destructive)
+                else if (alignment == GameManager.Alignment.Destructive)
                 {
                     hasDestructive = true;
                 }
@@ -574,12 +833,12 @@ public class GameManager : MonoBehaviourPun
         if (hasHelpful && !hasDestructive)
         {
             // Helpful side wins
-            photonView.RPC("WinGame", RpcTarget.All, (int)RoleAssigner.Alignment.Helpful);
+            photonView.RPC("WinGame", RpcTarget.All, (int)GameManager.Alignment.Helpful);
         }
         else if (hasDestructive && !hasHelpful)
         {
             // Destructive side wins
-            photonView.RPC("WinGame", RpcTarget.All, (int)RoleAssigner.Alignment.Destructive);
+            photonView.RPC("WinGame", RpcTarget.All, (int)GameManager.Alignment.Destructive);
         }
     }
     

@@ -55,6 +55,12 @@ MonoBehaviour:
   - RPC_AttackPlayer
   - WinGame
   - ReceiveAttack
+  - Attack
+  - NightUI
+  - NightUIOff
+  - SetRoleAndAlignment
+  - UpdateHealthUI
+  - GiveGold
   DisableAutoOpenWizard: 1
   ShowSettings: 0
   DevRegionSetOnce: 1

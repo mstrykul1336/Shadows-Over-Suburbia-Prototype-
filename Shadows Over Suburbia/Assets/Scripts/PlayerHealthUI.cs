@@ -17,15 +17,16 @@ public class PlayerHealthUI : MonoBehaviourPun
     void Start()
     {
         playerController = GetComponentInParent<PlayerController>();
-        if (playerController != null)
+        if (playerController != null && photonView.IsMine)
         {
             InitializeHearts(playerController.maxHearts); // Initialize hearts based on max health
             UpdateHealthUI(); // Update UI to match current health
         }
-        else
-        {
-            Debug.LogError("PlayerHealth component not found on the parent object.");
-        }
+        // else
+        // {
+        //     //gameObject.SetActive(false);
+        //    // Debug.Log("PlayerHealthUI disabled for non-local player.");
+        // }
     }
 
     void InitializeHearts(int maxHearts)
@@ -47,7 +48,7 @@ public class PlayerHealthUI : MonoBehaviourPun
         }
     }
 
-   
+    [PunRPC]
     public void UpdateHealthUI()
     {
         for (int i = 0; i < heartImages.Count; i++) // Use Count instead of Length

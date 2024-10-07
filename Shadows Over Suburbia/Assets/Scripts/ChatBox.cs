@@ -13,6 +13,7 @@ public class ChatBox : MonoBehaviourPun
     
     // instance
     public static ChatBox instance;
+    
 
     void Awake()
     {
@@ -28,8 +29,13 @@ public class ChatBox : MonoBehaviourPun
             chatInput.text = "";
         }
         EventSystem.current.SetSelectedGameObject(null);
+        var localPlayer = FindObjectOfType<FirstPersonController>();
+        if (localPlayer != null)
+        {
+            localPlayer.EnablePlayerControls();
+        }
     }
-
+    
     [PunRPC]
     void Log(string playerName, string message)
     {
@@ -42,10 +48,54 @@ public class ChatBox : MonoBehaviourPun
     {
         if (Input.GetKeyDown(KeyCode.Return))
         {
-            if (EventSystem.current.currentSelectedGameObject == chatInput.gameObject)
+            if (EventSystem.current.currentSelectedGameObject == chatInput.gameObject){
                 OnChatInputSend();
+            }
             else
+            {
                 EventSystem.current.SetSelectedGameObject(chatInput.gameObject);
+                var localPlayer = FindObjectOfType<FirstPersonController>();
+                if (localPlayer != null)
+                {
+                    localPlayer.DisablePlayerControls();
+                }
+            }
+            
+        }
+        if (Input.GetKeyDown(KeyCode.C))
+        {
+            if (chatInput.gameObject.activeInHierarchy)
+            {
+                ResumeChat(); // Close the chat if it's already open
+            }
+            else
+            {
+                OpenChat(); // Open the chat
+            }
         }
     }
+
+    private void OpenChat()
+    {
+        chatInput.gameObject.SetActive(true);
+        chatInput.Select(); // Select the input field
+        chatInput.ActivateInputField(); // Activate the input field
+        var localPlayer = FindObjectOfType<FirstPersonController>();
+        if (localPlayer != null)
+        {
+            localPlayer.DisablePlayerControls();
+        }
+    }
+
+    private void ResumeChat()
+    {
+        chatInput.gameObject.SetActive(false); // Hide the chat input
+        EventSystem.current.SetSelectedGameObject(null); // Deselect any selected UI object
+        var localPlayer = FindObjectOfType<FirstPersonController>();
+        if (localPlayer != null)
+        {
+            localPlayer.EnablePlayerControls();
+        }
+    }
+
 }
