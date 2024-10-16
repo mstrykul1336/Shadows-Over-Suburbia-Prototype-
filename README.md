@@ -1,4 +1,11 @@
 # Shadows Over Suburbia Prototype 
+Credits: 
+
+First Person Controller: https://assetstore.unity.com/packages/3d/characters/modular-first-person-controller-189884?srsltid=AfmBOorWmRFs9bx7ebwFwd15ni4eQk7cPH1-OeGcAaLAW0HUaVO0Xw5H
+
+ChatGPT for questions and bugs, learning how to do certain things I haven't done before in Unity. 
+
+Canva for demo asset icons (I will be drawing them later)
 10/14:
 
 **What was done**
