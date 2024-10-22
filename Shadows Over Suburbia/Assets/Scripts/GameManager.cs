@@ -50,6 +50,11 @@ public class GameManager : MonoBehaviourPun
     public int NightCycles = 0;
     public TextMeshProUGUI dayText;
     public PlayerController oldManPlayer;
+
+   // public Alignment playerAlignment;
+    public Image deathImage; 
+    public List<Sprite> deathImages;
+    private bool isWinnerDeclared = false;
    
 
     [Header("Effects")]
@@ -90,6 +95,7 @@ public class GameManager : MonoBehaviourPun
   
     void Start()
     {
+        isWinnerDeclared = false;
         timeRemaining = timerDuration;
         players = new PlayerController[PhotonNetwork.PlayerList.Length];
         photonView.RPC("ImInGame", RpcTarget.AllBuffered);
@@ -162,6 +168,7 @@ public class GameManager : MonoBehaviourPun
             Debug.Log($"PlayerController assigned for player {PhotonNetwork.LocalPlayer.ActorNumber} at index {playerIndex}");
            // playercontroller.photonView.RPC("Initialize", RpcTarget.AllBuffered, PhotonNetwork.LocalPlayer);
             photonView.RPC("AddPlayerToList", RpcTarget.AllBuffered, playerIndex, playercontroller.photonView.ViewID);
+            playercontroller.photonView.RPC("Initialize", RpcTarget.AllBuffered, PhotonNetwork.LocalPlayer);
         }
         else
         {
@@ -176,11 +183,9 @@ public class GameManager : MonoBehaviourPun
             else
                 Debug.Log($"Player at index {i} is null.");
         }
-        playercontroller.photonView.RPC("Initialize", RpcTarget.AllBuffered, PhotonNetwork.LocalPlayer);
         //photonView.RPC("AddPlayerToList", RpcTarget.AllBuffered, playerIndex, playercontroller.photonView.ViewID);
        // playerObj.GetComponent<PlayerController>().photonView.RPC("Initialize", RpcTarget.All, PhotonNetwork.LocalPlayer);
     }
-
 
     [PunRPC]
     void AddPlayerToList(int playerIndex, int viewID)
@@ -370,6 +375,7 @@ public class GameManager : MonoBehaviourPun
         {
             Debug.Log($"Calling SetRoleAndAlignment for local player {PhotonNetwork.LocalPlayer.NickName}");
             localPlayerController.SetRoleAndAlignment(role, alignment);
+            //photonView.RPC("SetRoleAndAlignmentRPC", RpcTarget.All, role, alignment);
         }
         else
         {
@@ -534,31 +540,70 @@ public class GameManager : MonoBehaviourPun
 
     public void CastVote(int playerIndex)
     {
-        if (hasVoted[PhotonNetwork.LocalPlayer.ActorNumber - 1])
-        {
-            Debug.Log("You have already voted.");
-            return;
-        }
-        Debug.Log($"Attempting to cast vote for player at index {playerIndex}");
+        // if (hasVoted[PhotonNetwork.LocalPlayer.ActorNumber - 1])
+        // {
+        //     Debug.Log("You have already voted.");
+        //     return;
+        // }
+        // Debug.Log($"Attempting to cast vote for player at index {playerIndex}");
 
-        // Check if voting is active
+        // // Check if voting is active
+        // if (votingActive)
+        // {
+        //     // Validate playerIndex
+        //     if (playerIndex < 0 || playerIndex >= votes.Length) 
+        //     {
+        //         Debug.LogError($"Invalid player index: {playerIndex}. Must be between 0 and {votes.Length - 1}.");
+        //         return; // Exit the method if index is invalid
+        //     }
+
+        //     int localPlayerIndex = PhotonNetwork.LocalPlayer.ActorNumber - 1;
+        //     if (!hasVoted[localPlayerIndex])
+        //     {
+        //         votes[playerIndex]++; // Increment the vote count for the selected player
+        //         hasVoted[localPlayerIndex] = true; // Mark this player as having voted
+        //         Debug.Log($"Player {playerIndex} received a vote!");
+        //         Destroy(playerVotingCanvas);
+        //         //CheckVoteResults(); // Check if we need to process the voting results
+        //     }
+        //     else
+        //     {
+        //         Debug.Log("You have already voted.");
+        //     }
+        // }
+        // else
+        // {
+        //     Debug.Log("Voting is not active.");
+        // }
+
         if (votingActive)
         {
-            // Validate playerIndex
-            if (playerIndex < 0 || playerIndex >= votes.Length) 
-            {
-                Debug.LogError($"Invalid player index: {playerIndex}. Must be between 0 and {votes.Length - 1}.");
-                return; // Exit the method if index is invalid
-            }
-
             int localPlayerIndex = PhotonNetwork.LocalPlayer.ActorNumber - 1;
+
             if (!hasVoted[localPlayerIndex])
             {
-                votes[playerIndex]++; // Increment the vote count for the selected player
-                hasVoted[localPlayerIndex] = true; // Mark this player as having voted
+                // Cast first vote
+                photonView.RPC("ReceiveVote", RpcTarget.All, playerIndex);
+
+                // Check if this player is the Old Man and allow them to vote again
+                if (players[localPlayerIndex].IsOldMan)
+                {
+                    // Allow the Old Man to vote twice
+                    Debug.Log("Old Man is voting again.");
+                    
+                    // You may want to give the player an option to vote for a second player,
+                    // or automatically cast a second vote for the same player
+                    photonView.RPC("ReceiveVote", RpcTarget.All, playerIndex);
+                }
+
+                // Mark this player as having voted
+                hasVoted[localPlayerIndex] = true;
                 Debug.Log($"Player {playerIndex} received a vote!");
+
+                // Hide the voting UI or disable voting buttons
                 Destroy(playerVotingCanvas);
-                //CheckVoteResults(); // Check if we need to process the voting results
+
+                // Optionally, call CheckVoteResults() here to tally votes if voting is done
             }
             else
             {
@@ -727,6 +772,8 @@ public class GameManager : MonoBehaviourPun
 
                 // Call NightUIOff for each player
                 player.NightUIOff();
+                //clear the actions list for detective
+                player.ClearNightActions();
             }
         }
 
@@ -893,6 +940,14 @@ public class GameManager : MonoBehaviourPun
         if (deathMessageText != null)
         {
             deathMessageText.text = $"{playerName} has died during the night.";
+            deathMessageText.gameObject.SetActive(true); 
+        }
+        if (deathImage != null && deathImages.Count > 0)
+        {
+            // Select a random image
+            int randomIndex = UnityEngine.Random.Range(0, deathImages.Count);
+            deathImage.sprite = deathImages[randomIndex];
+            deathImage.gameObject.SetActive(true); // Show the image
         }
 
         // Start coroutine to hide the message after a delay
@@ -904,7 +959,8 @@ public class GameManager : MonoBehaviourPun
         yield return new WaitForSeconds(delay);
         if (deathMessageText != null)
         {
-            deathMessageText.gameObject.SetActive(false); // Hide the message
+            deathMessageText.gameObject.SetActive(false);
+            deathImage.gameObject.SetActive(false); 
         }
         var playerController = GetPlayer(playerId);
 
@@ -997,16 +1053,28 @@ public class GameManager : MonoBehaviourPun
 
     private string[] GetPlayerNamesByAlignment(GameManager.Alignment alignment)
     {
+        // List<string> playerNames = new List<string>();
+
+        // foreach (var player in PhotonNetwork.PlayerList)
+        // {
+        //     if (GameManager.playerAlignments.TryGetValue(player.ActorNumber, out GameManager.Alignment playerAlignment))
+        //     {
+        //         if (playerAlignment == alignment)
+        //         {
+        //             playerNames.Add(player.NickName);
+        //         }
+        //     }
+        // }
+
+        // return playerNames.ToArray();
         List<string> playerNames = new List<string>();
 
         foreach (var player in PhotonNetwork.PlayerList)
         {
-            if (GameManager.playerAlignments.TryGetValue(player.ActorNumber, out GameManager.Alignment playerAlignment))
+            PlayerController playerController = player.TagObject as PlayerController; // Get the PlayerController component directly
+            if (playerController != null && playerController.playerAlignment == alignment) // Check the alignment property in PlayerController
             {
-                if (playerAlignment == alignment)
-                {
-                    playerNames.Add(player.NickName);
-                }
+                playerNames.Add(player.NickName);
             }
         }
 
@@ -1022,30 +1090,48 @@ public class GameManager : MonoBehaviourPun
     {
         bool hasHelpful = false;
         bool hasDestructive = false;
-       
+        bool oldManAlive = oldManPlayer != null && !oldManPlayer.dead;
+        if (isWinnerDeclared) // Early exit if a winner has been declared
+        {
+            return;
+        }
 
         foreach (var player in PhotonNetwork.PlayerList)
         {
-            if (GameManager.playerAlignments.TryGetValue(player.ActorNumber, out GameManager.Alignment alignment))
+            // if (GameManager.playerAlignments.TryGetValue(player.ActorNumber, out GameManager.Alignment alignment))
+            // {
+            //     if (alignment == GameManager.Alignment.Helpful)
+            //     {
+            //         hasHelpful = true;
+            //     }
+            //     else if (alignment == GameManager.Alignment.Destructive)
+            //     {
+            //         hasDestructive = true;
+            //     }
+            // }
+            PlayerController playerController = player.TagObject as PlayerController;
+            if (playerController != null)
             {
-                if (alignment == GameManager.Alignment.Helpful)
+                if (playerController.playerAlignment == GameManager.Alignment.Helpful)
                 {
                     hasHelpful = true;
                 }
-                else if (alignment == GameManager.Alignment.Destructive)
+                else if (playerController.playerAlignment == GameManager.Alignment.Destructive)
                 {
                     hasDestructive = true;
                 }
             }
         }
+        
         if (oldManPlayer != null && oldManPlayer.dead)
         {
             Debug.Log("Old Man has died. Old Man wins!");
+            isWinnerDeclared = true;
             photonView.RPC("WinGame", RpcTarget.All, (int)GameManager.Alignment.Neutral); // Declare Old Man (Neutral) as the winner
             return; // Stop further win checks
         }
 
-        if (oldManPlayer != null && !oldManPlayer.dead)
+        if (oldManAlive)
         {
             Debug.Log("Old Man is still alive. No win for Helpful or Destructive yet.");
             return; // Don't declare a win yet
@@ -1055,21 +1141,31 @@ public class GameManager : MonoBehaviourPun
         if (hasHelpful && !hasDestructive)
         {
             // Helpful side wins
+            isWinnerDeclared = true;
             photonView.RPC("WinGame", RpcTarget.All, (int)GameManager.Alignment.Helpful);
         }
         else if (hasDestructive && !hasHelpful)
         {
             // Destructive side wins
+            isWinnerDeclared = true;
             photonView.RPC("WinGame", RpcTarget.All, (int)GameManager.Alignment.Destructive);
         }
-        else if (!hasHelpful && !hasDestructive && oldManPlayer != null && oldManPlayer.dead)
-        {
-            // If both sides are gone and Old Man is dead, declare a win for Old Man
-            photonView.RPC("WinGame", RpcTarget.All, (int)GameManager.Alignment.Neutral);
-        }
+        // else if (!hasHelpful && !hasDestructive && oldManPlayer != null && oldManPlayer.dead)
+        // {
+        //     // If both sides are gone and Old Man is dead, declare a win for Old Man
+        //     isWinnerDeclared = true;
+        //     photonView.RPC("WinGame", RpcTarget.All, (int)GameManager.Alignment.Neutral);
+        // }
         else
         {
-            // Additional case to handle when both Helpful and Destructive are alive, or none are alive
+            // Check if both sides are alive
+            if (hasHelpful && hasDestructive)
+            {
+                Debug.Log("Both Helpful and Destructive sides are still alive. No winner yet.");
+                return; // No win condition yet
+            }
+
+            // If we reach this point, there may be no players left of either alignment
             Debug.Log("No clear winner yet.");
         }
     }
@@ -1093,22 +1189,26 @@ public class GameManager : MonoBehaviourPun
 
     public void ApplyPoisonEffects()
     {
-        for (int i = poisonedPlayers.Count - 1; i >= 0; i--) 
-        {
-            var effect = poisonedPlayers[i];
-            if (effect.nightsRemaining > 0)
-            {
-                Debug.Log($"Applying poison to {effect.player.photonPlayer.NickName}. Nights remaining: {effect.nightsRemaining}");
-                effect.player.photonView.RPC("TakePoisonDamage", RpcTarget.All, 1); // Apply 0.25 damage
-                effect.nightsRemaining--;
+        // for (int i = poisonedPlayers.Count - 1; i >= 0; i--) 
+        // {
+        //     var effect = poisonedPlayers[i];
+        //     if (effect.nightsRemaining > 0)
+        //     {
+        //         Debug.Log($"Applying poison to {effect.player.photonPlayer.NickName}. Nights remaining: {effect.nightsRemaining}");
+        //         effect.player.photonView.RPC("TakePoisonDamage", RpcTarget.All, 1); // Apply 0.25 damage
+        //         effect.nightsRemaining--;
 
-                // Remove the effect if no nights remain
-                if (effect.nightsRemaining == 0)
-                {
-                    poisonedPlayers.RemoveAt(i); // Safely remove from list
-                    Debug.Log($"{effect.player.photonPlayer.NickName} is no longer poisoned.");
-                }
-            }
+        //         // Remove the effect if no nights remain
+        //         if (effect.nightsRemaining == 0)
+        //         {
+        //             poisonedPlayers.RemoveAt(i); // Safely remove from list
+        //             Debug.Log($"{effect.player.photonPlayer.NickName} is no longer poisoned.");
+        //         }
+        //     }
+        // }
+        foreach (var poisonEffect in poisonedPlayers)
+        {
+            poisonEffect.ApplyPoison(); // Apply poison damage
         }
     }
 

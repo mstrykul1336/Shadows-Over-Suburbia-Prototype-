@@ -415,6 +415,11 @@ public class FirstPersonController : MonoBehaviourPun
         Cursor.visible = false;  // Hide the cursor again
     }
 
+    public bool AreControlsEnabled()
+    {
+        return canMove && canLook; // Controls are enabled if both canMove and canLook are true
+    }
+
     void FixedUpdate()
     {
         #region Movement
