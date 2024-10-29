@@ -58,7 +58,7 @@ public class PlayerList : MonoBehaviourPunCallbacks
                 Debug.Log($"{player.NickName} is the Mayor!");
             }
 
-            playerNameText.text = displayName;
+            playerNameText.text = displayName + "\n";
 
             // Set the player number (1-based index)
             playerNumberText.text = (i + 1).ToString(); // Display the player number (1, 2, 3, ...)

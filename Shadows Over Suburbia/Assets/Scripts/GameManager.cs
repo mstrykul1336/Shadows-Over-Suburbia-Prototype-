@@ -24,6 +24,7 @@ public class GameManager : MonoBehaviourPun
     public float firstDayTimeRemaining = 10;
     public GameObject mayorspawn;        
     public GameObject mayorbasementspawn; 
+    public TextMeshProUGUI firstdayText;
 
 
 
@@ -48,13 +49,25 @@ public class GameManager : MonoBehaviourPun
     public TextMeshProUGUI deathMessageText; 
     public int DayCycles = 0;
     public int NightCycles = 0;
-    public TextMeshProUGUI dayText;
+    public TextMeshProUGUI cycleText;
+    public TextMeshProUGUI dayCounterText;
+    public Image cycleIcon;
+    public Sprite sunIcon;  
+    public Sprite moonIcon; 
     public PlayerController oldManPlayer;
 
    // public Alignment playerAlignment;
     public Image deathImage; 
     public List<Sprite> deathImages;
+    public Image deathPictureImage;
+    public List<Sprite> deathPictureSprites;
+
     private bool isWinnerDeclared = false;
+    public GameObject journalDisplayUI;
+    public TextMeshProUGUI journalDisplayText;
+    public float deathImageDuration = 10f;
+ 
+
    
 
     [Header("Effects")]
@@ -101,7 +114,7 @@ public class GameManager : MonoBehaviourPun
         photonView.RPC("ImInGame", RpcTarget.AllBuffered);
         votes = new int[players.Length];
         hasVoted = new bool[PhotonNetwork.PlayerList.Length];
-        UpdateDayText();
+        UpdateCycleUI();
         // if (PhotonNetwork.IsMasterClient)
         // {
         //     AssignRoles();
@@ -250,10 +263,10 @@ public class GameManager : MonoBehaviourPun
         if (!PhotonNetwork.IsMasterClient) return;
         totalPlayers = PhotonNetwork.CurrentRoom.PlayerCount;
 
-        if (totalPlayers < 1)
+        if (totalPlayers < 2)
         {
             Debug.Log("There are not enough players for this game.");
-            SceneManager.LoadScene(sceneBuildIndex: 1);
+            SceneManager.LoadScene(sceneBuildIndex: 0);
         }
 
         // Create a list of available roles, excluding Mayor
@@ -420,13 +433,22 @@ public class GameManager : MonoBehaviourPun
     // }
 
 
-    void UpdateDayText()
+    void UpdateCycleUI()
     {
-        if (dayText != null)
+        if (isNightCycle)
         {
-            dayText.text = $"Day {DayCycles}"; // Update the text to show current day
+            cycleText.text = $"Night";
+            dayCounterText.text = $"{NightCycles} ";
+            cycleIcon.sprite = moonIcon;
+        }
+        else
+        {
+            cycleText.text = $"Day";
+            dayCounterText.text = $"{DayCycles}";
+            cycleIcon.sprite = sunIcon;
         }
     }
+    
     void Update()
     {
          // Only update the timer if voting is active
@@ -440,7 +462,7 @@ public class GameManager : MonoBehaviourPun
             if (firstDayTimeRemaining > 0)
             {
                 firstDayTimeRemaining -= Time.deltaTime; // Decrease the first day timer
-                timerText.text = $"{firstDayTimeRemaining:F2} seconds until night cycle"; 
+                firstdayText.text = $"{firstDayTimeRemaining:F2} seconds until night cycle"; 
             }
             else 
             {
@@ -527,7 +549,8 @@ public class GameManager : MonoBehaviourPun
         playerDropdown.ClearOptions();
         foreach (var player in PhotonNetwork.PlayerList)
         {
-             if (player.ActorNumber != PhotonNetwork.LocalPlayer.ActorNumber)
+            PlayerController playerController = GetPlayerControllerById(player.ActorNumber);
+            if (player.ActorNumber != PhotonNetwork.LocalPlayer.ActorNumber && (playerController == null || !playerController.dead))
             {
                 string optionText = $"{player.NickName} (#{player.ActorNumber})";
                 playerDropdown.options.Add(new TMP_Dropdown.OptionData(optionText));
@@ -536,6 +559,17 @@ public class GameManager : MonoBehaviourPun
 
         // Refresh the dropdown after adding options
         playerDropdown.RefreshShownValue();
+    }
+    private PlayerController GetPlayerControllerById(int actorNumber)
+    {
+        foreach (var pc in players) // Assuming 'players' is a list of all PlayerController instances
+        {
+            if (pc.photonView.Owner.ActorNumber == actorNumber)
+            {
+                return pc;
+            }
+        }
+        return null;
     }
 
     public void CastVote(int playerIndex)
@@ -696,6 +730,11 @@ public class GameManager : MonoBehaviourPun
         isNightCycle = true;
         NightCycles += 1;
         ApplyPoisonEffects();
+        UpdateCycleUI();
+        if (firstdayText.gameObject.activeSelf)
+        {
+            firstdayText.gameObject.SetActive(false); // Deactivate the text object
+        }
     
         SpawnRemainingPlayers(); // Teleport players if needed
         if (playerVotingCanvas != null)
@@ -740,7 +779,7 @@ public class GameManager : MonoBehaviourPun
     {
         isNightCycle = false;
         DayCycles += 1;
-        UpdateDayText();
+        UpdateCycleUI();
         var localPlayer = FindObjectOfType<FirstPersonController>();
         if (localPlayer != null)
         {
@@ -764,7 +803,7 @@ public class GameManager : MonoBehaviourPun
         // }
          foreach (PlayerController player in players)
         {
-            if (player != null)
+            if (player != null && !player.dead)
             {
                 // Give gold to each player
                 player.GiveGold();
@@ -786,7 +825,7 @@ public class GameManager : MonoBehaviourPun
     {
         foreach (var player in players)
         {
-            if (player != null) // Ensure the player is not null
+            if (player != null && !player.dead) // Ensure the player is not null
             {
                 // Get a random spawn point from the spawnPoints array
                 Vector3 teleportLocation = spawnPoints[UnityEngine.Random.Range(0, spawnPoints.Length)].position;
@@ -810,7 +849,7 @@ public class GameManager : MonoBehaviourPun
         Debug.Log("Spawning players");
         foreach (var player in players)
         {
-            if (player != null) // Ensure the player is not null
+            if (player != null && !player.dead) // Ensure the player is not null
             {
                  PhotonView playerPhotonView = player.GetComponent<PhotonView>();
                  if (playerPhotonView != null && playerPhotonView.IsMine)
@@ -910,24 +949,26 @@ public class GameManager : MonoBehaviourPun
             // Get the player's role and display it
             string role = targetPlayer.GetRole();
             roleRevealText.text = $"Player {playerIndex + 1} was voted out! Their role was: {role}";
-            targetPlayer.dead = true;
+            //targetPlayer.dead = true;
+            targetPlayer.BecomeSpectator();
+            Debug.Log($"{targetPlayer.photonView.Owner.NickName} has been turned into a spectator.");
 
             // Only the Master Client can destroy and disconnect players
-            if (PhotonNetwork.IsMasterClient)
-            {
-                // Destroy the player's GameObject across the network
-                PhotonNetwork.Destroy(targetPlayer.gameObject);
+            // if (PhotonNetwork.IsMasterClient)
+            // {
+            //     // Destroy the player's GameObject across the network
+            //     PhotonNetwork.Destroy(targetPlayer.gameObject);
 
-                // Get the PhotonPlayer object associated with the player
-                Photon.Realtime.Player photonPlayer = targetPlayer.photonView.Owner;
+            //     // Get the PhotonPlayer object associated with the player
+            //     Photon.Realtime.Player photonPlayer = targetPlayer.photonView.Owner;
 
-                // Forcefully disconnect the player if they are still connected
-                if (photonPlayer != null)
-                {
-                    PhotonNetwork.CloseConnection(photonPlayer);
-                    Debug.Log("Player " + photonPlayer.NickName + " has been forcefully disconnected.");
-                }
-            }
+            //     // Forcefully disconnect the player if they are still connected
+            //     if (photonPlayer != null)
+            //     {
+            //         PhotonNetwork.CloseConnection(photonPlayer);
+            //         Debug.Log("Player " + photonPlayer.NickName + " has been forcefully disconnected.");
+            //     }
+            // }
         }
        
     }
@@ -935,11 +976,14 @@ public class GameManager : MonoBehaviourPun
     {
         // Get the player's nickname
         string playerName = PhotonNetwork.CurrentRoom.Players[playerId].NickName;
+        PlayerController targetPlayer = players[playerId];
+        string role = targetPlayer.GetRole();
 
         // Display death message
         if (deathMessageText != null)
         {
-            deathMessageText.text = $"{playerName} has died during the night.";
+
+            deathMessageText.text = $"{playerName} has died during the night. Their role was {role}!";
             deathMessageText.gameObject.SetActive(true); 
         }
         if (deathImage != null && deathImages.Count > 0)
@@ -951,7 +995,7 @@ public class GameManager : MonoBehaviourPun
         }
 
         // Start coroutine to hide the message after a delay
-        StartCoroutine(HideDeathMessageAndDestroyPlayer(playerId, 5f));
+        StartCoroutine(HideDeathMessageAndDestroyPlayer(playerId, 10f));
     }
 
     private IEnumerator HideDeathMessageAndDestroyPlayer(int playerId, float delay)
@@ -966,23 +1010,24 @@ public class GameManager : MonoBehaviourPun
 
         if (playerController != null)
         {
-            // Check if the current client is the Master Client
-            if (PhotonNetwork.IsMasterClient)
-            {
-                // Check if the current client is not the owner of the PhotonView
-                if (!playerController.photonView.IsMine)
-                {
-                    // Take ownership of the PhotonView if the original owner has left
-                    playerController.photonView.TransferOwnership(PhotonNetwork.LocalPlayer);
-                }
+            playerController.BecomeSpectator();
+            // // Check if the current client is the Master Client
+            // if (PhotonNetwork.IsMasterClient)
+            // {
+            //     // Check if the current client is not the owner of the PhotonView
+            //     if (!playerController.photonView.IsMine)
+            //     {
+            //         // Take ownership of the PhotonView if the original owner has left
+            //         playerController.photonView.TransferOwnership(PhotonNetwork.LocalPlayer);
+            //     }
 
-                // Now destroy the object since the Master Client has ownership
-                PhotonNetwork.Destroy(playerController.gameObject);
-            }
-            else
-            {
-                Debug.LogError("Only the Master Client can destroy players' GameObjects.");
-            }
+            //     // Now destroy the object since the Master Client has ownership
+            //     PhotonNetwork.Destroy(playerController.gameObject);
+            // }
+            // else
+            // {
+            //     Debug.LogError("Only the Master Client can destroy players' GameObjects.");
+            // }
         }
     }
 
@@ -1211,5 +1256,29 @@ public class GameManager : MonoBehaviourPun
             poisonEffect.ApplyPoison(); // Apply poison damage
         }
     }
+
+    public void ShowDeathJournal(string journalContent)
+    {
+        journalDisplayText.text = "Journal Entries:\n" + journalContent;
+        journalDisplayUI.SetActive(true);
+
+        // Start a coroutine to hide it after 15 seconds
+        StartCoroutine(HideDeathJournalAfterTime(journalContent));
+    }
+
+    // Coroutine to hide the journal after the specified time
+    private IEnumerator HideDeathJournalAfterTime(string journalContent)
+    {
+        yield return new WaitForSeconds(deathImageDuration);
+
+        // Set the journal text and display the UI
+        journalDisplayText.text = "Journal Entries:\n" + journalContent;
+        journalDisplayUI.SetActive(true);
+
+        // Wait for 15 seconds to display the journal, then hide it
+        yield return new WaitForSeconds(15f);
+        journalDisplayUI.SetActive(false);
+    }
+
 
 }

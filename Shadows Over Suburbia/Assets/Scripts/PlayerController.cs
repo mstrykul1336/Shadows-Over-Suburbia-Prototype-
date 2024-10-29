@@ -16,7 +16,7 @@ public class PlayerController : MonoBehaviourPun
     public Player photonPlayer;
     public GameManager.Role playerRole { get; private set; }
     public GameManager.Alignment playerAlignment { get; private set; }
-    public bool dead;
+    public bool dead = false;
     public bool IsOldMan { get; set; }
 
     public float maxHearts = 2;  
@@ -66,9 +66,29 @@ public class PlayerController : MonoBehaviourPun
     public bool isProtected = false;
     public TextMeshProUGUI attackMessageText;
     public TextMeshProUGUI healMessageText;
-    
+    //public ChatManager ChatManager;
 
+    public TMP_InputField journalInput; 
+    private string journalContent = "";
+    public GameObject journalUI;
+    public TextMeshProUGUI journalDisplay;
+    public Button toggleJournalButton;
+    //public Button toggleSaveButton;
+    public bool isJournalOpen = false;
+    public GameObject ghostModel;
+    public GameObject roleAbilityCanvas; 
+    private bool isAbilityCanvasActive = false;
+    public Button SettingsButton;
+    public GameObject SettingsCanvas;
+    private bool isSettingsCanvasActive = false;
+    public bool canChat = true;
 
+    public Transform[] spectatorSpawnPoints;
+    public MeshRenderer capsuleMeshRenderer;
+    public GameObject ghostVision;
+    public GameObject chatPrefab; 
+    private GameObject chatInstance; 
+    private ChatManager ChatManager;
   
 
     //ITEMS
@@ -101,6 +121,20 @@ public class PlayerController : MonoBehaviourPun
         playerDropdown1.gameObject.SetActive(false);
         playerDropdown2.gameObject.SetActive(false);
         ConnectionsButton.gameObject.SetActive(false);
+        journalUI.SetActive(false);
+        chatInstance = Instantiate(chatPrefab, transform);
+        Debug.Log("Chat prefab instantiated for player: " + photonView.Owner.NickName); // Instantiate as a child of the player object
+        if (!photonView.IsMine)
+        {
+            chatInstance.SetActive(false); // Disable chat for non-local players
+            Debug.Log("Chat disabled for non-local player: " + photonView.Owner.NickName);
+        }
+        else
+        {
+            ChatManager = chatInstance.GetComponent<ChatManager>(); // Get the ChatManager component
+            ChatManager.chatPanel.SetActive(true); // Make sure the chat panel is active for the local player
+            Debug.Log("Chat enabled for local player: " + photonView.Owner.NickName);
+        }
        // PhotonNetwork.LocalPlayer.TagObject = this.gameObject; // Where this script is attached to the player GameObject
         // SetHealthByRole();
         // healthUI = GetComponentInChildren<PlayerHealthUI>();
@@ -116,9 +150,14 @@ public class PlayerController : MonoBehaviourPun
         Investigatebutton.onClick.AddListener(HandleInvestigate);
         Psychicsbutton.onClick.AddListener(HandlePsychic);
         ConnectionsButton.onClick.AddListener(HandleConnections);
+        toggleJournalButton.onClick.AddListener(ToggleJournal);
+        //toggleSaveButton.onClick.AddListener(SaveJournalEntry);
+        SettingsButton.onClick.AddListener(ToggleSettings);
+        journalInput.onEndEdit.AddListener(OnJournalInputEndEdit);
         gameManager = FindObjectOfType<GameManager>();
         healthUI = GetComponentInChildren<PlayerHealthUI>();
         playerControls = FindObjectOfType<FirstPersonController>();
+        ChatManager = FindObjectOfType<ChatManager>();
         // SetHealthByRole();
         currentHearts = maxHearts;
         // if (healthUI != null)
@@ -208,10 +247,9 @@ public class PlayerController : MonoBehaviourPun
         }
         playerRole = role;
         playerAlignment = alignment;
-       
+        GameManager.playerRoles[photonView.Owner.ActorNumber] = playerRole;
         photonView.RPC("SetAlignment", RpcTarget.All, alignment);
         photonView.RPC("SetRole", RpcTarget.All, role);
-        GameManager.playerAlignments[photonView.Owner.ActorNumber] = this.playerAlignment;
         playerAbility = GetAbilityForRole(role, alignment);
         // Handle any other logic based on role and alignment if necessary
         Debug.Log($"Player Role: {playerRole}, Alignment: {playerAlignment}");
@@ -296,7 +334,7 @@ public class PlayerController : MonoBehaviourPun
     void Update()
     {
 
-        if (Input.GetKeyDown(KeyCode.I))
+        if (Input.GetKeyDown(KeyCode.I) && !isJournalOpen)
         {
             ToggleInventory();
         }
@@ -312,12 +350,33 @@ public class PlayerController : MonoBehaviourPun
                 playerControls.EnablePlayerControls();
             }
         }
+        if (Input.GetKeyDown(KeyCode.F1))
+        {
+            ToggleAbilityCanvas();
+        }
 
         
+    }
+
+    public void ToggleAbilityCanvas()
+    {
+        isAbilityCanvasActive = !isAbilityCanvasActive; // Toggle the state
+
+       
+        roleAbilityCanvas.SetActive(isAbilityCanvasActive); // Set the canvas active/inactive
+    }
+
+    public void ToggleSettings()
+    {
+        isSettingsCanvasActive= !isSettingsCanvasActive;
+
+        
+        SettingsCanvas.SetActive(isSettingsCanvasActive); 
     }
    
     public void NightUI()
     {
+        if (dead) return; 
         if(!photonView.IsMine)
         {
             return;
@@ -409,6 +468,7 @@ public class PlayerController : MonoBehaviourPun
 
     public void ToggleInventory()
     {
+        if (dead) return; 
         isInventoryOpen = !isInventoryOpen;
         localinventoryUIInstance.SetActive(isInventoryOpen); // Toggle visibility
         UpdateInventoryUI(); // Update the inventory when toggling
@@ -464,10 +524,12 @@ public class PlayerController : MonoBehaviourPun
         if (isProtected)
         {
             Debug.Log($"{photonPlayer.NickName} is protected by a shield. No damage taken.");
+            ChatManager.DisplayLocalMessage($"{photonPlayer.NickName} is protected by a shield. No damage taken.");
             isProtected = false; // Remove shield protection after blocking one attack
             return;
         }
         Debug.Log($"Poison damage taken by {photonPlayer.NickName}");
+        ChatManager.DisplayLocalMessage($"Poison damage taken by {photonPlayer.NickName}");
         currentHearts -= ((float)damageinQuarters / 4);
 
         if (healthUI != null)
@@ -499,8 +561,9 @@ public class PlayerController : MonoBehaviourPun
         // Update the UI to show that the player was attacked
         if (photonView.Owner == player)
         {
-            Debug.Log($"NotifyAttack called for player: {player.NickName}");
-            UpdateAttackMessage("Attacked!");
+            //Debug.Log($"NotifyAttack called for player: {player.NickName}");
+            //UpdateAttackMessage("Attacked!");
+            ChatManager.DisplayLocalMessage($"{player.NickName} was attacked!");
         }
     }
     [PunRPC]
@@ -509,39 +572,38 @@ public class PlayerController : MonoBehaviourPun
         // Update the UI to show that the player was healed
         if (photonView.Owner == player)
         {
-            Debug.Log($"NotifyHeal called for player: {player.NickName}");
-            UpdateAttackMessage("Healed!");
+            ChatManager.DisplayLocalMessage($"{player.NickName} was healed!");
         }
     }
     
-    private void UpdateAttackMessage(string message)
-    {
-        // Assuming you have a TextMeshProUGUI reference for the attack message
-        if (attackMessageText != null)
-        {
-            attackMessageText.text = message;
-            attackMessageText.gameObject.SetActive(true); // Show the message
-            StartCoroutine(HideMessageAfterDelay(3f)); 
-        }
-    }
+    // private void UpdateAttackMessage(string message)
+    // {
+    //     // Assuming you have a TextMeshProUGUI reference for the attack message
+    //     if (attackMessageText != null)
+    //     {
+    //         attackMessageText.text = message;
+    //         attackMessageText.gameObject.SetActive(true); // Show the message
+    //         StartCoroutine(HideMessageAfterDelay(3f)); 
+    //     }
+    // }
 
-    private void UpdateHealMessage(string message)
-    {
-        // Assuming you have a TextMeshProUGUI reference for the healing message
-        if (healMessageText != null)
-        {
-            healMessageText.text = message;
-            healMessageText.gameObject.SetActive(true); // Show the message
-            StartCoroutine(HideMessageAfterDelay(3f)); 
-        }
-    }
+    // private void UpdateHealMessage(string message)
+    // {
+    //     // Assuming you have a TextMeshProUGUI reference for the healing message
+    //     if (healMessageText != null)
+    //     {
+    //         healMessageText.text = message;
+    //         healMessageText.gameObject.SetActive(true); // Show the message
+    //         StartCoroutine(HideMessageAfterDelay(3f)); 
+    //     }
+    // }
 
-    private IEnumerator HideMessageAfterDelay(float delay)
-    {
-        yield return new WaitForSeconds(delay);
-        attackMessageText.gameObject.SetActive(false); 
-        healMessageText.gameObject.SetActive(false);
-    }
+    // private IEnumerator HideMessageAfterDelay(float delay)
+    // {
+    //     yield return new WaitForSeconds(delay);
+    //     attackMessageText.gameObject.SetActive(false); 
+    //     healMessageText.gameObject.SetActive(false);
+    // }
 
     private void HandleAttack()
     {
@@ -644,6 +706,7 @@ public class PlayerController : MonoBehaviourPun
                 hasAttacked = true;
                 Investigatebutton.gameObject.SetActive(false);
                 photonView.RPC("Investigate", RpcTarget.All, player.photonPlayer);
+                ChatManager.DisplayLocalMessage($"Investigated {selectedPlayerName}");
                 playerDropdown.gameObject.SetActive(false);
                 break;
             }
@@ -675,8 +738,9 @@ public class PlayerController : MonoBehaviourPun
             string result = CheckConnection(player1.playerRole, player1.playerAlignment, player2.playerRole, player2.playerAlignment);
             Debug.Log($"Player1: {playerName1}, Role: {player1.playerRole}, Alignment: {player1.playerAlignment}");
             Debug.Log($"Player2: {playerName2}, Role: {player2.playerRole}, Alignment: {player2.playerAlignment}");
+            ChatManager.DisplayLocalMessage($"{playerName1} and {playerName2} are: {result}");
             Debug.Log($"{playerName1} and {playerName2} are: {result}");
-            psychicText.text = $"{playerName1} and {playerName2} are: {result}";
+            //psychicText.text = $"{playerName1} and {playerName2} are: {result}";
             RecordAction($"Checked connection between {playerName1} and {playerName2}.");
             Psychicsbutton.gameObject.SetActive(false);
             playerDropdown1.gameObject.SetActive(false);
@@ -710,7 +774,8 @@ public class PlayerController : MonoBehaviourPun
             //string alignment = selectedPlayer.playerAlignment.ToString();
             //debug.Log($"{selectedPlayerName}'s alignment is: {alignment}");
 
-            connectionsText.text = $"{selectedPlayerName}'s alignment is: {playerAlignment}";
+            //connectionsText.text = $"{selectedPlayerName}'s alignment is: {playerAlignment}";
+            ChatManager.DisplayLocalMessage( $"{selectedPlayerName}'s alignment is: {playerAlignment}");
             RecordAction($"Checked alignment for {selectedPlayerName}.");
             ConnectionsButton.gameObject.SetActive(false);
             playerDropdown.gameObject.SetActive(false);
@@ -870,13 +935,17 @@ public class PlayerController : MonoBehaviourPun
             if (player.photonPlayer == targetPlayer)
             {
                 string actionLog = "Actions taken by " + player.photonPlayer.NickName + ":\n";
-                investigateText.text = "Actions taken by " + player.photonPlayer.NickName + ":\n";
+                //investigateText.text = "Actions taken by " + player.photonPlayer.NickName + ":\n";
                 
                 // Get their night actions
                 foreach (string action in player.nightActions)
                 {
                     actionLog += action + "\n";  // Append each action to the log
-                    investigateText.text += action + "\n";
+                    //investigateText.text += action + "\n";
+                }
+                if (ChatManager != null)
+                {
+                    ChatManager.DisplayLocalMessage(actionLog);
                 }
 
                 // Send the action log back to the investigator
@@ -915,7 +984,7 @@ public class PlayerController : MonoBehaviourPun
     {
         // Display the actions of the investigated player
         Debug.Log(actionLog);
-        investigateText.text = actionLog;
+        //investigateText.text = actionLog;
     }
 
 
@@ -925,6 +994,7 @@ public class PlayerController : MonoBehaviourPun
         dead = true;
         Debug.Log($"{photonView.Owner.NickName} has died!");
         GameManager.instance.NotifyPlayerDeath(photonView.Owner.ActorNumber);
+        DisplayJournalOnDeath();
 
         if (playerRole == GameManager.Role.OldMan)
         {
@@ -949,6 +1019,8 @@ public class PlayerController : MonoBehaviourPun
             {
                 // Call the RPC to take this player to the basement
                 photonView.RPC("TeleportToBasement", RpcTarget.All, player.photonPlayer);
+                RecordAction($"Took {selectedPlayerName} to the basement.");
+                ChatManager.DisplayLocalMessage($"Took {selectedPlayerName} to the basement.");
                 break;
             }
         }
@@ -1059,11 +1131,13 @@ public class PlayerController : MonoBehaviourPun
                 healthUI.UpdateHealthUI();
             }
             Debug.Log($"{photonPlayer.NickName} used a Potion. Current Hearts: {currentHearts}");
+            ChatManager.DisplayLocalMessage($"{photonPlayer.NickName} used a Potion. Current Hearts: {currentHearts}");
             playerInventory.Remove("Potion");
         }
         else
         {
             Debug.Log($"{photonPlayer.NickName} tried to use a Potion, but health is full.");
+            ChatManager.DisplayLocalMessage($"{photonPlayer.NickName} tried to use a Potion, but health is full.");
         }
     }
 
@@ -1072,11 +1146,14 @@ public class PlayerController : MonoBehaviourPun
        if (!IsNight())
         {
             Debug.Log("Shield can only be used at night!");
+            ChatManager.DisplayLocalMessage("Shield can only be used at night!");
+
             return;
         }
 
         isProtected = true; // Player is protected
         Debug.Log($"{photonPlayer.NickName} used a Shield. You are protected for the night.");
+        ChatManager.DisplayLocalMessage($"{photonPlayer.NickName} used a Shield. You are protected for the night.");
     
         // Optional: You may want to disable the shield after one use
         playerInventory.Remove("Shield");
@@ -1087,7 +1164,7 @@ public class PlayerController : MonoBehaviourPun
     {
         if (!IsNight())
         {
-            Debug.Log("Knife can only be used at night!");
+            ChatManager.DisplayLocalMessage("Knife can only be used at night!");
             return;
         }
 
@@ -1100,7 +1177,7 @@ public class PlayerController : MonoBehaviourPun
     {
         if (itemDropdown.value < 0)
         {
-            Debug.Log("No item selected.");
+            ChatManager.DisplayLocalMessage("No item selected.");
             return; // No valid selection
         }
 
@@ -1165,12 +1242,114 @@ public class PlayerController : MonoBehaviourPun
             {
                 // Call a method to deal damage to the selected player
                 player.photonView.RPC("TakeDamage", RpcTarget.All, 1); // Assuming knife deals 1 damage
+                ChatManager.DisplayLocalMessage($"Attacked {selectedPlayerName}");
                 playerInventory.Remove("Knife");
                 break;
             }
         }
         attackDropdownUI.SetActive(false);
     }
+
+    public void ToggleJournal()
+    {
+        if (dead) return; 
+        journalUI.SetActive(!journalUI.activeSelf);
+        if (journalUI.activeSelf)
+        {
+            journalDisplay.text = "Journal Entries:\n" + journalContent;// Load previous content into input field
+            isJournalOpen = true;
+        }
+        else
+        {
+            isJournalOpen = false;
+        }
+    }
+    private void OnJournalInputEndEdit(string inputText)
+    {
+        
+        if (!string.IsNullOrEmpty(inputText))
+        {
+            journalContent += inputText + "\n";
+        
+            // Update the displayed journal text
+            journalDisplay.text = "Journal Entries:\n" + journalContent;
+        
+            
+            journalInput.text = "";
+        }
+    }
+
+
+    // public void SaveJournalEntry()
+    // {
+    //     journalContent = journalInput.text; // Save current input
+    //     journalInput.text = ""; // Clear input field for new entries
+    // }
+
+    // Method to display the journal content when the player dies
+    public void DisplayJournalOnDeath()
+    {
+      gameManager.ShowDeathJournal(journalContent);
+    }
+
+    public void BecomeSpectator()
+    {
+        dead = true;
+        SwitchToGhostModel();
+        DisableAbilities();
+        ghostVision.SetActive(true);
+        Transform spawnPoint = spectatorSpawnPoints[UnityEngine.Random.Range(0, spectatorSpawnPoints.Length)];
+
+    // Set player position to the spawn point location
+        transform.position = spawnPoint.position;
+        transform.rotation = spawnPoint.rotation;
+    }
+
+    private void SwitchToGhostModel()
+    {
+        if (capsuleMeshRenderer != null)
+        {
+            capsuleMeshRenderer.enabled = false;  // Hide the capsule by turning off its MeshRenderer
+        }
+
+        // Enable the ghost model
+        if (ghostModel != null)
+        {
+            ghostModel.SetActive(true);           // Activate the ghost model
+        }
+    }
+
+    private void DisableAbilities()
+    {
+        if (localinventoryUIInstance != null){
+            localinventoryUIInstance.SetActive(false); 
+        }// Disable Inventory UI
+    
+        if (journalUI != null){
+            journalUI.SetActive(false); 
+        }  // Disable Journal UI
+    
+        if (nightcanvas != null){
+            nightcanvas.SetActive(false);
+        }
+        canChat = false;
+
+    }
+    [PunRPC]
+    public void ReceiveGlobalMessage(string message, string senderName)
+    {
+        // Assuming you have a reference to your ChatManager
+        ChatManager chatManager = FindObjectOfType<ChatManager>();
+        if (chatManager != null)
+        {
+            chatManager.DisplayRemoteMessage(message, senderName); // Call a method in ChatManager to display the message
+        }
+        else
+        {
+            Debug.LogError("ChatManager not found!");
+        }
+    }
+ 
 
 
     

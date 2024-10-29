@@ -9,6 +9,7 @@ public class Title : MonoBehaviour
     public GameObject controlscanvas;
     public GameObject howtocanvas;
     public GameObject maincanvas;
+    public GameObject alignmentCanvas;
     // Start is called before the first frame update
     void Start()
     {
@@ -64,5 +65,14 @@ public class Title : MonoBehaviour
     {
         howtocanvas.SetActive(false);
         maincanvas.SetActive(true);
+        alignmentCanvas.SetActive(false);
+    }
+
+    public void OnAlignmentButton()
+    {
+     
+        howtocanvas.SetActive(false);
+        alignmentCanvas.SetActive(true);
+        
     }
 }
