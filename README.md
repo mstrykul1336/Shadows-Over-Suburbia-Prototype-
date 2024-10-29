@@ -12,7 +12,8 @@ Fantasy Terrain Textures:
 https://assetstore.unity.com/packages/2d/textures-materials/free-fantasy-terrain-textures-233640
 Fantasy Towns Music Pack: 
 https://chrislsound.itch.io/fantasy-towns-music-pack
-
+Ghost model: 
+https://assetstore.unity.com/packages/3d/characters/creatures/ghost-character-free-267003
 **10/21/24:**
 **What was done:**
 - Made the voting UI cleaner and better by adding a background image, adding an image to the button, and adding some text to explain it. 
