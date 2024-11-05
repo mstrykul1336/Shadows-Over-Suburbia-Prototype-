@@ -14,6 +14,11 @@ Fantasy Towns Music Pack:
 https://chrislsound.itch.io/fantasy-towns-music-pack
 Ghost model: 
 https://assetstore.unity.com/packages/3d/characters/creatures/ghost-character-free-267003
+Night room models: 
+https://assetstore.unity.com/packages/3d/environments/interior-house-assets-urp-257122
+Office pack for Town Hall: 
+https://assetstore.unity.com/packages/3d/props/interior/office-pack-free-258600
+
 **10/21/24:**
 **What was done:**
 - Made the voting UI cleaner and better by adding a background image, adding an image to the button, and adding some text to explain it. 
