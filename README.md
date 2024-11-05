@@ -35,8 +35,10 @@ https://assetstore.unity.com/packages/3d/props/interior/office-pack-free-258600\
 - added in a bunch of new environment props and objects to the town hall room 
 - added in a bunch of new environment props into every player's night room
 - changed code for winning and losing to include old man's neutral alignment screen and hopefully by using the hashtable, the mechanic should work better. 
-- changed the role reveal function to use the hashtable instead of trying to find the role in player controller list 
+- changed the role reveal function to use the hashtable instead of trying to find the role in player controller list
+  
 **To Do:**
+  
 - I added in the how to play a different method of the voting system that is used in other games similar to mine. I want to implement this: 
 - First round of voting will be held, where a player is selected to be voted out.  
 - Then, another voting round will be held to either vote out the player or not. The player should get 30 seconds to make their case before players vote.  
