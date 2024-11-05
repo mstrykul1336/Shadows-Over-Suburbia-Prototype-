@@ -12,6 +12,8 @@ public class WinUIManager : MonoBehaviour
     public GameObject winningscreen;
     public Image townwins;
     public Image cultwins;
+    public Image oldmanwins;
+
 
     public void ShowWinUI(string winningSide, string[] playerNames)
     {
@@ -31,6 +33,10 @@ public class WinUIManager : MonoBehaviour
         {
             PlayWinVideo(cultwins);
         }
+         else if (winningSide == "Neutral")
+        {
+            PlayWinVideo(oldmanwins);
+        }
         // Start the timer to hide the UI
         StartCoroutine(HideWinUIAfterDelay(15f));
     }
@@ -46,6 +52,7 @@ public class WinUIManager : MonoBehaviour
         // Stop any currently playing video
         townwins.gameObject.SetActive(false);
         cultwins.gameObject.SetActive(false);
+        oldmanwins.gameObject.SetActive(false);
 
         // Play the selected video
         image.gameObject.SetActive(true);

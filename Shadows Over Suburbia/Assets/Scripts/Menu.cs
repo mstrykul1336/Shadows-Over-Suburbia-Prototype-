@@ -125,7 +125,7 @@ public class Menu : MonoBehaviourPunCallbacks, ILobbyCallbacks
             playerListText.text += player.NickName + "\n";
           
         // set the room info text
-        roomInfoText.text = "<b>Party Name</b>\n" + PhotonNetwork.CurrentRoom.Name;
+        roomInfoText.text = "<b>Town Name</b>\n" + PhotonNetwork.CurrentRoom.Name;
     }
 
     public override void OnPlayerLeftRoom(Player otherPlayer)

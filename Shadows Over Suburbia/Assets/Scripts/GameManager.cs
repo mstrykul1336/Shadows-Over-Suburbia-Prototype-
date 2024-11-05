@@ -8,6 +8,7 @@ using TMPro;
 using UnityEngine.UI;
 using System;
 using UnityEngine.SceneManagement;
+using PhotonHashtable = ExitGames.Client.Photon.Hashtable;
 
 public class GameManager : MonoBehaviourPun
 {
@@ -16,12 +17,12 @@ public class GameManager : MonoBehaviourPun
     public Transform[] spawnPoints;
     private int playersInGame;
     public static GameManager instance;
-    public float timerDuration = 5f;
+    [SerializeField] public float timerDuration = 5f;
     public TextMeshProUGUI timerText;
-    public float timeRemaining;
+    [SerializeField] public float timeRemaining;
     public PlayerController[] players;
-    public float postGameTime = 50;
-    public float firstDayTimeRemaining = 10;
+    [SerializeField] public float postGameTime = 50;
+    [SerializeField] public float firstDayTimeRemaining = 10;
     public GameObject mayorspawn;        
     public GameObject mayorbasementspawn; 
     public TextMeshProUGUI firstdayText;
@@ -66,6 +67,9 @@ public class GameManager : MonoBehaviourPun
     public GameObject journalDisplayUI;
     public TextMeshProUGUI journalDisplayText;
     public float deathImageDuration = 10f;
+
+    private bool isNominatingPhase = true; // Track if we are in the nominating phase
+    private int nominatedPlayerIndex = -1;
  
 
    
@@ -153,6 +157,7 @@ public class GameManager : MonoBehaviourPun
 
     private IEnumerator WaitAndAssignRoles()
     {
+        if (!PhotonNetwork.IsMasterClient) yield break;
         // Wait for a short period to ensure all clients have updated their players array
         yield return new WaitForSeconds(1f);
 
@@ -333,6 +338,7 @@ public class GameManager : MonoBehaviourPun
             playerAlignments[playerId] = assignedAlignment;
 
             // Send the role to the player
+            SetPlayerProperties(player.Value.NickName, assignedRole.ToString(), assignedAlignment.ToString());
             photonView.RPC("ReceiveRoleandAlignment", player.Value, assignedRole, assignedAlignment);
         }
 
@@ -355,6 +361,30 @@ public class GameManager : MonoBehaviourPun
     {
         int randomValue = UnityEngine.Random.Range(0, 2); // 0 or 1
         return (randomValue == 0) ? Alignment.Destructive : Alignment.Helpful;
+    }
+
+    public void SetPlayerProperties(string playerName, string role, string alignment)
+    {
+        PhotonHashtable playerProperties = new PhotonHashtable
+        {
+            { "PlayerName", playerName },
+            { "Role", role },
+            { "Alignment", alignment }
+        };
+
+        // Setting player properties in Photon
+        PhotonNetwork.LocalPlayer.SetCustomProperties(playerProperties);
+        Debug.Log($"Player Name: {playerName}, Role: {role}, Alignment: {alignment}");
+    }
+
+    public void GetPlayerProperties(Player player)
+    {
+        if (player.CustomProperties.TryGetValue("PlayerName", out object playerName) &&
+            player.CustomProperties.TryGetValue("Role", out object role) &&
+            player.CustomProperties.TryGetValue("Alignment", out object alignment))
+        {
+            Debug.Log($"Player Name: {playerName}, Role: {role}, Alignment: {alignment}");
+        }
     }
 
     [PunRPC]
@@ -525,7 +555,10 @@ public class GameManager : MonoBehaviourPun
                 CreateVotingCanvas();
             }
 
-            StartCoroutine(VotingDelay());
+           
+            if (!PhotonNetwork.IsMasterClient) return;
+           // StartCoroutine(VotingDelay());
+            StartCoroutine(NominatingPhase());
         }
     }
     void CreateVotingCanvas()
@@ -543,6 +576,41 @@ public class GameManager : MonoBehaviourPun
         // Add listener to cast vote when button is clicked
         voteButton.onClick.AddListener(() => CastVote(playerDropdown.value));
     }
+    // private void StartVotingPhase()
+    // {
+    //     isNominatingPhase = false; // Switch to voting phase
+    //     Debug.Log("Voting phase has started.");
+
+    //     // Show nominated player to everyone
+    //     NotifyAllPlayersOfNomination();
+
+    //     // Give the nominated player 30 seconds to make their case
+    //     StartCoroutine(NomineeSpeechPhase());
+
+    //     // Set up the voting canvas for the second round of voting
+    //     CreateVotingCanvasForVoting();
+    // }
+
+    private void NotifyAllPlayersOfNomination()
+    {
+        // Notify all players about who is nominated
+        Debug.Log($"Player {nominatedPlayerIndex} has been nominated for voting.");
+    }
+
+    private void CreateVotingCanvasForVoting()
+    {
+        // Similar to CreateVotingCanvas but for the second round
+        playerVotingCanvas = Instantiate(votingCanvasPrefab);
+        playerVotingCanvas.transform.SetParent(PhotonNetwork.LocalPlayer.TagObject as Transform, false);
+        TMP_Dropdown playerDropdown = playerVotingCanvas.GetComponentInChildren<TMP_Dropdown>();
+        Button voteButton = playerVotingCanvas.GetComponentInChildren<Button>();
+
+        InitializePlayerDropdown(playerDropdown); // Reinitialize for voting
+
+        // Add listener to cast vote when button is clicked
+        voteButton.onClick.AddListener(() => CastVote(playerDropdown.value));
+    }
+
 
     void InitializePlayerDropdown(TMP_Dropdown playerDropdown)
     {
@@ -610,7 +678,7 @@ public class GameManager : MonoBehaviourPun
         //     Debug.Log("Voting is not active.");
         // }
 
-        if (votingActive)
+        if (isNominatingPhase && votingActive)
         {
             int localPlayerIndex = PhotonNetwork.LocalPlayer.ActorNumber - 1;
 
@@ -715,13 +783,14 @@ public class GameManager : MonoBehaviourPun
     // Reset for next voting session
         //ResetForNextVoting();
     }
-    private IEnumerator VotingDelay()
+    private IEnumerator NominatingPhase()
     {
         // Wait for 30 seconds
         yield return new WaitForSeconds(30f);
         
         // After the delay, call EndVoting
         EndVoting();
+        //StartVotingPhase();
     }
 
     public void StartNightCycle()
@@ -771,7 +840,7 @@ public class GameManager : MonoBehaviourPun
             localPlayer.DisablePlayerControls();
         }
        
-        Invoke(nameof(StartDayCycle), 30f);
+        Invoke(nameof(StartDayCycle), 50f);
 
     }
 
@@ -932,6 +1001,7 @@ public class GameManager : MonoBehaviourPun
 
     private IEnumerator EliminationDelay()
     {
+        if (!PhotonNetwork.IsMasterClient) yield break;
         // Wait for a specified duration (e.g., 3 seconds)
         yield return new WaitForSeconds(5f);
         
@@ -942,60 +1012,106 @@ public class GameManager : MonoBehaviourPun
     void RevealRoleAndRemovePlayer(int playerIndex)
     {
         Debug.Log("Revealing player and role");
+        //PlayerController targetPlayer = players[playerIndex];
+        // // Here you need to get the role of the player and display it
+        // if (targetPlayer != null)
+        // {
+        //     // Get the player's role and display it
+        //     string role = targetPlayer.GetRole();
+        //     roleRevealText.text = $"Player {playerIndex + 1} was voted out! Their role was: {role}";
+        //     //targetPlayer.dead = true;
+        //     targetPlayer.BecomeSpectator();
+        //     Debug.Log($"{targetPlayer.photonView.Owner.NickName} has been turned into a spectator.");
+
+        //     // Only the Master Client can destroy and disconnect players
+        //     // if (PhotonNetwork.IsMasterClient)
+        //     // {
+        //     //     // Destroy the player's GameObject across the network
+        //     //     PhotonNetwork.Destroy(targetPlayer.gameObject);
+
+        //     //     // Get the PhotonPlayer object associated with the player
+        //     //     Photon.Realtime.Player photonPlayer = targetPlayer.photonView.Owner;
+
+        //     //     // Forcefully disconnect the player if they are still connected
+        //     //     if (photonPlayer != null)
+        //     //     {
+        //     //         PhotonNetwork.CloseConnection(photonPlayer);
+        //     //         Debug.Log("Player " + photonPlayer.NickName + " has been forcefully disconnected.");
+        //     //     }
+        //     // }
+        // }
+
         PlayerController targetPlayer = players[playerIndex];
-        // Here you need to get the role of the player and display it
+    
         if (targetPlayer != null)
         {
-            // Get the player's role and display it
-            string role = targetPlayer.GetRole();
-            roleRevealText.text = $"Player {playerIndex + 1} was voted out! Their role was: {role}";
-            //targetPlayer.dead = true;
-            targetPlayer.BecomeSpectator();
-            Debug.Log($"{targetPlayer.photonView.Owner.NickName} has been turned into a spectator.");
-
-            // Only the Master Client can destroy and disconnect players
-            // if (PhotonNetwork.IsMasterClient)
-            // {
-            //     // Destroy the player's GameObject across the network
-            //     PhotonNetwork.Destroy(targetPlayer.gameObject);
-
-            //     // Get the PhotonPlayer object associated with the player
-            //     Photon.Realtime.Player photonPlayer = targetPlayer.photonView.Owner;
-
-            //     // Forcefully disconnect the player if they are still connected
-            //     if (photonPlayer != null)
-            //     {
-            //         PhotonNetwork.CloseConnection(photonPlayer);
-            //         Debug.Log("Player " + photonPlayer.NickName + " has been forcefully disconnected.");
-            //     }
-            // }
+            // Access the player's role from Photon Hashtable properties
+            if (targetPlayer.photonView.Owner.CustomProperties.TryGetValue("Role", out object role))
+            {
+                roleRevealText.text = $"Player {playerIndex + 1} was voted out! Their role was: {role}";
+                // Mark player as spectator
+                targetPlayer.BecomeSpectator();
+                Debug.Log($"{targetPlayer.photonView.Owner.NickName} has been turned into a spectator.");
+            }
+            else
+            {
+                Debug.LogWarning("Role not found in player properties.");
+            }
         }
        
     }
     public void NotifyPlayerDeath(int playerId)
     {
-        // Get the player's nickname
         string playerName = PhotonNetwork.CurrentRoom.Players[playerId].NickName;
         PlayerController targetPlayer = players[playerId];
-        string role = targetPlayer.GetRole();
+        // Get the player's nickname
+        // string playerName = PhotonNetwork.CurrentRoom.Players[playerId].NickName;
+        // PlayerController targetPlayer = players[playerId];
+        // string role = targetPlayer.GetRole();
 
-        // Display death message
-        if (deathMessageText != null)
+        // // Display death message
+        // if (deathMessageText != null)
+        // {
+
+        //     deathMessageText.text = $"{playerName} has died during the night. Their role was {role}!";
+        //     deathMessageText.gameObject.SetActive(true); 
+        // }
+        // if (deathImage != null && deathImages.Count > 0)
+        // {
+        //     // Select a random image
+        //     int randomIndex = UnityEngine.Random.Range(0, deathImages.Count);
+        //     deathImage.sprite = deathImages[randomIndex];
+        //     deathImage.gameObject.SetActive(true); // Show the image
+        // }
+
+        // // Start coroutine to hide the message after a delay
+        // if (!PhotonNetwork.IsMasterClient) return;
+        // StartCoroutine(HideDeathMessageAndDestroyPlayer(playerId, 10f));
+         if (targetPlayer.photonView.Owner.CustomProperties.TryGetValue("Role", out object role))
         {
+            if (deathMessageText != null)
+            {
+                deathMessageText.text = $"{playerName} has died during the night. Their role was {role}!";
+                deathMessageText.gameObject.SetActive(true); 
+            }
 
-            deathMessageText.text = $"{playerName} has died during the night. Their role was {role}!";
-            deathMessageText.gameObject.SetActive(true); 
+            if (deathImage != null && deathImages.Count > 0)
+            {
+                int randomIndex = UnityEngine.Random.Range(0, deathImages.Count);
+                deathImage.sprite = deathImages[randomIndex];
+                deathImage.gameObject.SetActive(true);
+            }
+
+            // Start coroutine to hide the message after a delay
+            if (PhotonNetwork.IsMasterClient)
+            {
+                StartCoroutine(HideDeathMessageAndDestroyPlayer(playerId, 10f));
+            }
         }
-        if (deathImage != null && deathImages.Count > 0)
+        else
         {
-            // Select a random image
-            int randomIndex = UnityEngine.Random.Range(0, deathImages.Count);
-            deathImage.sprite = deathImages[randomIndex];
-            deathImage.gameObject.SetActive(true); // Show the image
+            Debug.LogWarning("Role not found in player properties.");
         }
-
-        // Start coroutine to hide the message after a delay
-        StartCoroutine(HideDeathMessageAndDestroyPlayer(playerId, 10f));
     }
 
     private IEnumerator HideDeathMessageAndDestroyPlayer(int playerId, float delay)
@@ -1081,7 +1197,7 @@ public class GameManager : MonoBehaviourPun
         }
         else if (winningSide == (int)GameManager.Alignment.Neutral)
         {
-            winningSideName = "Old Man (Neutral)";
+            winningSideName = "Neutral";
             playerNames = new string[] { oldManPlayer.photonPlayer.NickName }; // Assuming oldManPlayer has a PhotonPlayer reference
         }
 
@@ -1116,8 +1232,12 @@ public class GameManager : MonoBehaviourPun
 
         foreach (var player in PhotonNetwork.PlayerList)
         {
-            PlayerController playerController = player.TagObject as PlayerController; // Get the PlayerController component directly
-            if (playerController != null && playerController.playerAlignment == alignment) // Check the alignment property in PlayerController
+            // PlayerController playerController = player.TagObject as PlayerController; // Get the PlayerController component directly
+            // if (playerController != null && playerController.playerAlignment == alignment) // Check the alignment property in PlayerController
+            // {
+            //     playerNames.Add(player.NickName);
+            // }
+            if (player.CustomProperties.TryGetValue("Alignment", out object playerAlignment) && playerAlignment.ToString() == alignment.ToString())
             {
                 playerNames.Add(player.NickName);
             }
@@ -1136,6 +1256,7 @@ public class GameManager : MonoBehaviourPun
         bool hasHelpful = false;
         bool hasDestructive = false;
         bool oldManAlive = oldManPlayer != null && !oldManPlayer.dead;
+        bool hasNeutral = false;
         if (isWinnerDeclared) // Early exit if a winner has been declared
         {
             return;
@@ -1154,16 +1275,19 @@ public class GameManager : MonoBehaviourPun
             //         hasDestructive = true;
             //     }
             // }
-            PlayerController playerController = player.TagObject as PlayerController;
-            if (playerController != null)
+            if (player.CustomProperties.TryGetValue("Alignment", out object playerAlignment))
             {
-                if (playerController.playerAlignment == GameManager.Alignment.Helpful)
+                if (playerAlignment.ToString() == GameManager.Alignment.Helpful.ToString())
                 {
                     hasHelpful = true;
                 }
-                else if (playerController.playerAlignment == GameManager.Alignment.Destructive)
+                else if (playerAlignment.ToString() == GameManager.Alignment.Destructive.ToString())
                 {
                     hasDestructive = true;
+                }
+                else if (playerAlignment.ToString() == GameManager.Alignment.Neutral.ToString())
+                {
+                    hasNeutral = true;
                 }
             }
         }
@@ -1263,6 +1387,7 @@ public class GameManager : MonoBehaviourPun
         journalDisplayUI.SetActive(true);
 
         // Start a coroutine to hide it after 15 seconds
+        if (!PhotonNetwork.IsMasterClient) return;
         StartCoroutine(HideDeathJournalAfterTime(journalContent));
     }
 
@@ -1280,5 +1405,10 @@ public class GameManager : MonoBehaviourPun
         journalDisplayUI.SetActive(false);
     }
 
+} 
 
-}
+
+
+
+
+

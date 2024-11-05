@@ -19,6 +19,7 @@ using Photon.Realtime;
 public class FirstPersonController : MonoBehaviourPun
 {
     private Rigidbody rb;
+    public Slider sensitivitySlider;
 
     #region Camera Movement Variables
 
@@ -133,6 +134,7 @@ public class FirstPersonController : MonoBehaviourPun
 
     private bool canMove = true; // To control movement
     private bool canLook = true; // To control camera rotation
+    
 
     #endregion
 
@@ -211,6 +213,13 @@ public class FirstPersonController : MonoBehaviourPun
             playerCamera.gameObject.SetActive(false);
         }
 
+        if (sensitivitySlider != null)
+        {
+            // Initialize the slider with the current sensitivity and add listener
+            sensitivitySlider.value = mouseSensitivity;
+            sensitivitySlider.onValueChanged.AddListener(UpdateMouseSensitivity);
+        }
+
         #endregion
     }
     private void DisableRemoteComponents()
@@ -230,6 +239,10 @@ public class FirstPersonController : MonoBehaviourPun
     public void UpdatePosition(Vector3 newPosition)
     {
         transform.position = newPosition;
+    }
+    void UpdateMouseSensitivity(float value)
+    {
+        mouseSensitivity = value;
     }
 
     private void Update()
@@ -601,6 +614,7 @@ public class FirstPersonController : MonoBehaviourPun
     {
         fpc = (FirstPersonController)target;
         SerFPC = new SerializedObject(fpc);
+
     }
 
     public override void OnInspectorGUI()
@@ -616,7 +630,11 @@ public class FirstPersonController : MonoBehaviourPun
         #region Camera Setup
 
         EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
+
         GUILayout.Label("Camera Setup", new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter, fontStyle = FontStyle.Bold, fontSize = 13 }, GUILayout.ExpandWidth(true));
+        GUILayout.Label("Stamina Setup", new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter, fontStyle = FontStyle.Bold, fontSize = 13 });
+        
+        fpc.sensitivitySlider = (Slider)EditorGUILayout.ObjectField(new GUIContent("Stamina Slider", "Assign the UI slider for stamina display."), fpc.sensitivitySlider, typeof(Slider), true);
         EditorGUILayout.Space();
 
         fpc.playerCamera = (Camera)EditorGUILayout.ObjectField(new GUIContent("Camera", "Camera attached to the controller."), fpc.playerCamera, typeof(Camera), true);

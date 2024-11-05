@@ -272,7 +272,7 @@ public class PlayerController : MonoBehaviourPun
         {
             healthUI.UpdateHealthUI();
         }
-        
+
     }
     [PunRPC]
     public void SetAlignment(GameManager.Alignment alignment)
@@ -353,6 +353,11 @@ public class PlayerController : MonoBehaviourPun
         if (Input.GetKeyDown(KeyCode.F1))
         {
             ToggleAbilityCanvas();
+        }
+
+        if (Input.GetKeyDown(KeyCode.Escape))
+        {
+            ToggleSettings();
         }
 
         
