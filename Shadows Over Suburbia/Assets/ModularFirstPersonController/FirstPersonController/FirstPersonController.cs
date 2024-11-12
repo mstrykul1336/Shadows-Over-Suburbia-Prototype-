@@ -20,6 +20,9 @@ public class FirstPersonController : MonoBehaviourPun
 {
     private Rigidbody rb;
     public Slider sensitivitySlider;
+    public Camera firstPersonCamera;  
+    public Camera thirdPersonCamera;
+    private bool isFirstPerson = true;
 
     #region Camera Movement Variables
 
@@ -134,6 +137,7 @@ public class FirstPersonController : MonoBehaviourPun
 
     private bool canMove = true; // To control movement
     private bool canLook = true; // To control camera rotation
+
     
 
     #endregion
@@ -163,6 +167,8 @@ public class FirstPersonController : MonoBehaviourPun
 
     void Start()
     {
+        firstPersonCamera.enabled = true;
+        thirdPersonCamera.enabled = false;
         if (photonView.IsMine)
         {
             if(lockCursor)
@@ -243,6 +249,32 @@ public class FirstPersonController : MonoBehaviourPun
     void UpdateMouseSensitivity(float value)
     {
         mouseSensitivity = value;
+    }
+
+    public void ToggleCameraView()
+    {
+        if (!photonView.IsMine)
+        {
+            return;
+        }
+        // Toggle the boolean to switch views
+        isFirstPerson = !isFirstPerson;
+
+        // Enable the corresponding camera
+        firstPersonCamera.enabled = isFirstPerson;
+        thirdPersonCamera.enabled = !isFirstPerson;
+
+        // Optional: Lock/unlock cursor based on view
+        if (isFirstPerson)
+        {
+            Cursor.lockState = CursorLockMode.Locked;
+            Cursor.visible = false;
+        }
+        else
+        {
+            Cursor.lockState = CursorLockMode.None;
+            Cursor.visible = true;
+        }
     }
 
     private void Update()
@@ -636,8 +668,8 @@ public class FirstPersonController : MonoBehaviourPun
         
         fpc.sensitivitySlider = (Slider)EditorGUILayout.ObjectField(new GUIContent("Stamina Slider", "Assign the UI slider for stamina display."), fpc.sensitivitySlider, typeof(Slider), true);
         EditorGUILayout.Space();
-
-        fpc.playerCamera = (Camera)EditorGUILayout.ObjectField(new GUIContent("Camera", "Camera attached to the controller."), fpc.playerCamera, typeof(Camera), true);
+        fpc.thirdPersonCamera= (Camera)EditorGUILayout.ObjectField(new GUIContent("Camera 3rd", "Camera attached to the controller."), fpc.thirdPersonCamera, typeof(Camera), true);
+        fpc.firstPersonCamera = (Camera)EditorGUILayout.ObjectField(new GUIContent("Camera 1st", "Camera attached to the controller."), fpc.firstPersonCamera, typeof(Camera), true);
         fpc.fov = EditorGUILayout.Slider(new GUIContent("Field of View", "The camera’s view angle. Changes the player camera directly."), fpc.fov, fpc.zoomFOV, 179f);
         fpc.cameraCanMove = EditorGUILayout.ToggleLeft(new GUIContent("Enable Camera Rotation", "Determines if the camera is allowed to move."), fpc.cameraCanMove);
 

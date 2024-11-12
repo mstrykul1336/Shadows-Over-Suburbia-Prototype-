@@ -5,6 +5,7 @@ using UnityEngine.UI;
 using TMPro;
 using Photon.Pun;
 using Photon.Realtime;
+using Hashtable = ExitGames.Client.Photon.Hashtable;
 
 public class Menu : MonoBehaviourPunCallbacks, ILobbyCallbacks
 {
@@ -14,6 +15,7 @@ public class Menu : MonoBehaviourPunCallbacks, ILobbyCallbacks
     public GameObject lobbyScreen;
     public GameObject lobbyBrowserScreen;
     public GameObject titleScreen;
+    public GameObject characterSelectScreen;
 
     [Header("Main Screen")]
     public Button createRoomButton;
@@ -30,6 +32,15 @@ public class Menu : MonoBehaviourPunCallbacks, ILobbyCallbacks
     public GameObject roomButtonPrefab;
     private List<GameObject> roomButtons = new List<GameObject>();
     private List<RoomInfo> roomList = new List<RoomInfo>();
+
+    public GameObject[] playerModels;
+    private int selectedModelIndex = 0;
+
+
+    public GameObject rolescanvas;
+    public GameObject controlscanvas;
+    public GameObject howtocanvas;
+    //public GameObject maincanvas;
 
 
     // Start is called before the first frame update
@@ -61,7 +72,9 @@ public class Menu : MonoBehaviourPunCallbacks, ILobbyCallbacks
         createRoomScreen.SetActive(false);
         lobbyScreen.SetActive(false);
         lobbyBrowserScreen.SetActive(false);
-        titleScreen.SetActive(false);
+        //titleScreen.SetActive(false);
+        characterSelectScreen.SetActive(false);
+
 
         // activate the requested screen
         screen.SetActive(true);
@@ -194,5 +207,60 @@ public class Menu : MonoBehaviourPunCallbacks, ILobbyCallbacks
     public override void OnRoomListUpdate(List<RoomInfo> allRooms)
     {
         roomList = allRooms;
+    }
+
+    public void OnCharacterSelectButton(int index)
+    {
+        selectedModelIndex = index;
+        Hashtable playerProperties = new Hashtable();
+       // playerProperties["characterModel"] = selectedModelIndex;
+       // PhotonNetwork.LocalPlayer.SetCustomProperties(playerProperties);
+        playerProperties.Add("ModelIndex", selectedModelIndex);
+        PhotonNetwork.LocalPlayer.SetCustomProperties(playerProperties);
+    }
+
+    public void OnConfirmCharacterSelection()
+    {
+        SetScreen(mainScreen); // After selection, go back to main screen or lobby
+    }
+
+
+    public void OnRolesButton()
+    {
+     
+        rolescanvas.SetActive(true);
+        //maincanvas.SetActive(false);
+    }
+
+    public void OnControlsButton()
+    {
+        controlscanvas.SetActive(true);
+       // maincanvas.SetActive(false);
+    }
+
+    public void OnExitControlButton()
+    {
+        controlscanvas.SetActive(false);
+       // maincanvas.SetActive(true);
+    }
+
+    public void OnExitRolesButton()
+    {
+        rolescanvas.SetActive(false);
+        //maincanvas.SetActive(true);
+    }
+
+    public void OnHowToButton()
+    {
+     
+        howtocanvas.SetActive(true);
+        //maincanvas.SetActive(false);
+        
+    }
+
+    public void OnExitHowtoButton()
+    {
+        howtocanvas.SetActive(false);
+       // maincanvas.SetActive(true);
     }
 }

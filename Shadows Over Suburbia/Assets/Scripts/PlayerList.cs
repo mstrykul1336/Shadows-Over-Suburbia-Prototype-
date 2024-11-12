@@ -26,6 +26,7 @@ public class PlayerList : MonoBehaviourPunCallbacks
         UpdatePlayerList();
     }
 
+    [PunRPC]
     public void UpdatePlayerList()
     {
         // Clear existing entries
@@ -51,11 +52,21 @@ public class PlayerList : MonoBehaviourPunCallbacks
             // Set the player name
             string displayName = player.NickName;
 
-            // Check if the player is the Mayor and add the special character
-            if (player.CustomProperties.TryGetValue("Role", out object role) && role.ToString() == GameManager.Role.Mayor.ToString())
+            // // Check if the player is the Mayor and add the special character
+            // if (player.CustomProperties.TryGetValue("Role", out object role) && role.ToString() == GameManager.Role.Mayor.ToString())
+            // {
+            //     displayName += " \u2666"; // Use your special character here
+            //     Debug.Log($"{player.NickName} is the Mayor!");
+            // }
+            //Debug.Log($"Checking properties for {player.NickName}: {player.CustomProperties}");
+            if (player.CustomProperties.TryGetValue("Role", out object role))
             {
-                displayName += " \u2666"; // Use your special character here
-                Debug.Log($"{player.NickName} is the Mayor!");
+                //Debug.Log($"{player.NickName}'s Role: {role}");
+                if (role.ToString() == GameManager.Role.Mayor.ToString())
+                {
+                    displayName += " \u2666"; // Add the mayor symbol
+                    //Debug.Log($"{player.NickName} is the Mayor!");
+                }
             }
 
             playerNameText.text = displayName + "\n";

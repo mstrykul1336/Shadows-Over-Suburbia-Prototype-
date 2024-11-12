@@ -38,7 +38,7 @@ public class WinUIManager : MonoBehaviour
             PlayWinVideo(oldmanwins);
         }
         // Start the timer to hide the UI
-        StartCoroutine(HideWinUIAfterDelay(15f));
+        StartCoroutine(HideWinUIAfterDelay(30f));
     }
 
     private System.Collections.IEnumerator HideWinUIAfterDelay(float delay)

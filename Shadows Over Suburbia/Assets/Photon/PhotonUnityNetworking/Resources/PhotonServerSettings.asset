@@ -75,6 +75,10 @@ MonoBehaviour:
   - NotifyAttack
   - NotifyHeal
   - ReceiveGlobalMessage
+  - SetPlayerModel
+  - StartNightCycleSync
+  - StartDayCycleSync
+  - UpdatePlayerList
   DisableAutoOpenWizard: 1
-  ShowSettings: 0
+  ShowSettings: 1
   DevRegionSetOnce: 1

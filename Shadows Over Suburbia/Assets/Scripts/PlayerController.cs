@@ -91,6 +91,24 @@ public class PlayerController : MonoBehaviourPun
     private ChatManager ChatManager;
   
 
+    public GameObject goblin;
+    public GameObject elf;
+    public GameObject villager1;
+    public GameObject villager2;
+    public GameObject citizen;
+    public GameObject witch;
+    public Image profilePicture;
+    public Sprite mayorImage;
+    public Sprite villagerSprite;
+    public Sprite assistantSprite;
+    public Sprite ClairvoyantSprite;
+    public Sprite oldManSprite;
+    public Sprite detectiveSprite;
+    public Sprite MedicSprite;
+    public Sprite bakerSprite;
+    private Sprite currentProfilePicture;
+
+
     //ITEMS
     public enum ItemType
     {
@@ -234,6 +252,45 @@ public class PlayerController : MonoBehaviourPun
 
         playerDropdown.AddOptions(options);
     }
+    
+    [PunRPC]
+    public void SetPlayerModel(int index)
+    {
+        if (capsuleMeshRenderer != null)
+        {
+            capsuleMeshRenderer.enabled = false;  // Hide the capsule by turning off its MeshRenderer
+        }
+
+        if (index == 0)
+        {
+            goblin.gameObject.SetActive(true);
+        }
+        else if (index == 1)
+        {
+            citizen.gameObject.SetActive(true);
+        }
+        else if (index == 2)
+        {
+            elf.gameObject.SetActive(true);
+        }
+        else if (index == 4)
+        {
+            villager1.gameObject.SetActive(true);
+        }
+        else if (index == 5)
+        {
+            villager2.gameObject.SetActive(true);
+        }
+        else if (index == 3)
+        {
+            witch.gameObject.SetActive(true);
+        }
+        else
+        {
+            villager2.gameObject.SetActive(true);
+        }
+
+    }
 
 
 
@@ -272,6 +329,7 @@ public class PlayerController : MonoBehaviourPun
         {
             healthUI.UpdateHealthUI();
         }
+        SetProfilePictureByRole();
 
     }
     [PunRPC]
@@ -291,6 +349,56 @@ public class PlayerController : MonoBehaviourPun
         return playerRole.ToString();
     }
 
+    public void SetProfilePictureByRole()
+    {
+        string role = GetRole(); 
+        switch (role)
+        {
+            case "Mayor":
+                profilePicture.sprite = mayorImage;
+                currentProfilePicture = mayorImage;
+                break;
+            case "Baker":
+                profilePicture.sprite = bakerSprite;
+                currentProfilePicture = bakerSprite;
+                break;
+            case "Villager":
+                profilePicture.sprite = villagerSprite;
+                currentProfilePicture = villagerSprite;
+                break;
+            case "Assistant":
+                profilePicture.sprite = assistantSprite;
+                currentProfilePicture = assistantSprite;
+                break;
+            case "Medic":
+                profilePicture.sprite = MedicSprite;
+                currentProfilePicture = MedicSprite;
+                break;
+            case "Detective":
+                profilePicture.sprite = detectiveSprite;
+                currentProfilePicture = detectiveSprite;
+                break;
+            case "Clairvoyant":
+                profilePicture.sprite = ClairvoyantSprite;
+                currentProfilePicture = ClairvoyantSprite;
+                break;
+
+            case "OldMan":
+                profilePicture.sprite = oldManSprite;
+                currentProfilePicture = oldManSprite;
+                break;
+            default:
+                profilePicture.sprite = villagerSprite;
+                currentProfilePicture = villagerSprite;
+                break;
+        }
+
+    }
+
+    // public Sprite GetCurrentProfilePicture()
+    // {
+    //     return currentProfilePicture;
+    // }
 
 
     public void SetHealthByRole()
@@ -358,6 +466,10 @@ public class PlayerController : MonoBehaviourPun
         if (Input.GetKeyDown(KeyCode.Escape))
         {
             ToggleSettings();
+        }
+        if (Input.GetKeyDown(KeyCode.F3))
+        {
+            playerControls.ToggleCameraView();
         }
 
         

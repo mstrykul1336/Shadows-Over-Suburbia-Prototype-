@@ -17,15 +17,23 @@ public class GameManager : MonoBehaviourPun
     public Transform[] spawnPoints;
     private int playersInGame;
     public static GameManager instance;
-    [SerializeField] public float timerDuration = 5f;
+    [SerializeField] public float timerDuration = 20f;
     public TextMeshProUGUI timerText;
     [SerializeField] public float timeRemaining;
     public PlayerController[] players;
-    [SerializeField] public float postGameTime = 50;
+    [SerializeField] public float postGameTime = 20f;
     [SerializeField] public float firstDayTimeRemaining = 10;
     public GameObject mayorspawn;        
     public GameObject mayorbasementspawn; 
     public TextMeshProUGUI firstdayText;
+    public double firstDayStartTime;
+    public double votingStartTime;
+
+    public Camera mainCamera; 
+    public Material daySkybox;
+    public Material nightSkybox;
+    public Animator cameraAnimator; 
+    public Animator lightsanimator;
 
 
 
@@ -71,6 +79,24 @@ public class GameManager : MonoBehaviourPun
     private bool isNominatingPhase = true; // Track if we are in the nominating phase
     private int nominatedPlayerIndex = -1;
  
+    public float nightCycleTimeRemaining = 50f;
+    private double nightCycleStartTime; 
+
+    public float dayCycleDuration = 60f; // Duration of the day cycle in seconds
+    private double dayCycleStartTime;
+    public float nightCycleDuration = 60f;
+
+
+    public Image deathProfileImage;
+    public Sprite mayorDeathImage;
+    public Sprite villagerDeathImage;
+    public Sprite assistantDeathImage;
+    public Sprite clairvoyantDeathImage;
+    public Sprite oldManDeathImage;
+    public Sprite detectiveDeathImage;
+    public Sprite medicDeathImage;
+    public Sprite bakerDeathImage;
+    //private Sprite currentProfilePicture;
 
    
 
@@ -109,6 +135,7 @@ public class GameManager : MonoBehaviourPun
         instance = this;
     }
 
+
   
     void Start()
     {
@@ -124,6 +151,11 @@ public class GameManager : MonoBehaviourPun
         //     AssignRoles();
         // }
         //UpdatePlayerList();
+       //firstDayStartTime = PhotonNetwork.Time;
+        if (mainCamera != null)
+        {
+            mainCamera.enabled = false;
+        }
     }
 
 
@@ -170,6 +202,8 @@ public class GameManager : MonoBehaviourPun
    
     public void SpawnPlayer()
     {
+        //int modelIndex = (int)PhotonNetwork.LocalPlayer.CustomProperties["ModelIndex"];
+        int modelIndex = (int?)PhotonNetwork.LocalPlayer.CustomProperties["ModelIndex"] ?? 0;
         GameObject playerObj = PhotonNetwork.Instantiate(playerPrefabPath, spawnPoints[UnityEngine.Random.Range(0, spawnPoints.Length)].position, Quaternion.identity);
         Debug.Log("Spawning player.");
         //playerObjects[PhotonNetwork.LocalPlayer.ActorNumber] = playerObj;
@@ -185,6 +219,7 @@ public class GameManager : MonoBehaviourPun
             players[playerIndex] = playercontroller;
             Debug.Log($"PlayerController assigned for player {PhotonNetwork.LocalPlayer.ActorNumber} at index {playerIndex}");
            // playercontroller.photonView.RPC("Initialize", RpcTarget.AllBuffered, PhotonNetwork.LocalPlayer);
+            playercontroller.photonView.RPC("SetPlayerModel", RpcTarget.AllBuffered, modelIndex);
             photonView.RPC("AddPlayerToList", RpcTarget.AllBuffered, playerIndex, playercontroller.photonView.ViewID);
             playercontroller.photonView.RPC("Initialize", RpcTarget.AllBuffered, PhotonNetwork.LocalPlayer);
         }
@@ -268,7 +303,7 @@ public class GameManager : MonoBehaviourPun
         if (!PhotonNetwork.IsMasterClient) return;
         totalPlayers = PhotonNetwork.CurrentRoom.PlayerCount;
 
-        if (totalPlayers < 2)
+        if (totalPlayers < 1)
         {
             Debug.Log("There are not enough players for this game.");
             SceneManager.LoadScene(sceneBuildIndex: 0);
@@ -426,7 +461,8 @@ public class GameManager : MonoBehaviourPun
         }
         CreatePlayerCanvas(role, alignment);
         PlayerList playerList = FindObjectOfType<PlayerList>();
-        playerList.UpdatePlayerList();
+       // playerList.UpdatePlayerList();
+       photonView.RPC("UpdatePlayerList", RpcTarget.All);
             
             
     }
@@ -453,7 +489,6 @@ public class GameManager : MonoBehaviourPun
                 roleText.color = Color.gray; // Gray for Neutral
             }
         }
-
     }
 
     // public override void OnPlayerEnteredRoom(Player newPlayer)
@@ -488,30 +523,53 @@ public class GameManager : MonoBehaviourPun
         }
         if (DayCycles == 0)
         {
-            // Start the night cycle after 30 seconds
-            if (firstDayTimeRemaining > 0)
+            if (firstDayStartTime == 0)
             {
-                firstDayTimeRemaining -= Time.deltaTime; // Decrease the first day timer
-                firstdayText.text = $"{firstDayTimeRemaining:F2} seconds until night cycle"; 
+                firstDayStartTime = PhotonNetwork.Time; // Initialize start time once
             }
-            else 
+            double elapsedFirstDayTime = PhotonNetwork.Time - firstDayStartTime;
+            firstDayTimeRemaining = 30f - (float)elapsedFirstDayTime;
+            // Start the night cycle after 30 seconds
+            if (firstDayStartTime > 0)
+            {
+                //firstDayTimeRemaining -= Time.deltaTime; // Decrease the first day timer
+                //firstDayTimeRemaining = 30f - (float)(PhotonNetwork.Time);
+                firstdayText.text = $"{firstDayTimeRemaining:F2} seconds until night cycle";
+            }
+             if (elapsedFirstDayTime <= 1.5f) 
+            {
+                PlayerList playerList = FindObjectOfType<PlayerList>();
+                if (playerList != null)
+                {
+                    photonView.RPC("UpdatePlayerList", RpcTarget.All);
+                }
+            }
+            if (firstDayTimeRemaining <= 0)
             {
                 Debug.Log("30 seconds elapsed. Starting night cycle.");
                 StartNightCycle(); // Start night cycle after 30 seconds
+                //votingStartTime = PhotonNetwork.Time;
+                firstDayStartTime = 0; // Reset the start time for next cycle
             }
             return;
         }
 
-        // Continue with regular voting logic
-        if (timeRemaining > 0)
+        //Continue with regular voting logic
+        if (votingStartTime > 0) // Ensure votingStartTime has been set
         {
-            timeRemaining -= Time.deltaTime;
-            timerText.text = $"{timeRemaining:F2}";
-        }
-        else if (!votingActive)
-        {
-            Debug.Log("Time is up! Start voting!");
-            StartVoting();
+            double elapsedVotingTime = PhotonNetwork.Time - votingStartTime;
+            timeRemaining = 30f - (float)elapsedVotingTime;
+
+            if (timeRemaining > 0)
+            {
+                timerText.text = $"{timeRemaining:F2}";
+            }
+            else if (!votingActive && timeRemaining <= 0)
+            {
+                Debug.Log("Time is up! Start voting!");
+                StartVoting();
+                votingStartTime = 0f; // Reset after voting ends
+            }
         }
 
         // if (timeRemaining > 0)
@@ -795,11 +853,43 @@ public class GameManager : MonoBehaviourPun
 
     public void StartNightCycle()
     {
+        if (PhotonNetwork.IsMasterClient)
+        {
+            double startTime = PhotonNetwork.Time; // Use PhotonNetwork.Time to ensure consistency
+            photonView.RPC(nameof(StartNightCycleSync), RpcTarget.All, startTime); // Broadcast to all clients
+        }
+    }
+    public void StartDayCycle()
+    {
+        if (PhotonNetwork.IsMasterClient)
+        {
+            double startTime = PhotonNetwork.Time; // Use PhotonNetwork.Time to ensure consistency
+            photonView.RPC(nameof(StartDayCycleSync), RpcTarget.All, startTime); // Broadcast to all clients
+        }
+    }
+
+    [PunRPC]
+    public void StartDayCycleSync(double startTime)
+    {
+        dayCycleStartTime = startTime;
+        StartCoroutine(DayCycleRoutine());
+    }
+    
+
+    [PunRPC]
+    public void StartNightCycleSync(double startTime)
+    {
+        nightCycleStartTime = startTime;
+        StartCoroutine(NightCycleRoutine());
+    }
+    public IEnumerator NightCycleRoutine()
+    {
         Debug.Log("Starting night cycle");
+        SwitchToMainCamera(nightSkybox);
+        Invoke(nameof(ReturnToPlayerCamera), 10f);
         isNightCycle = true;
         NightCycles += 1;
         ApplyPoisonEffects();
-        UpdateCycleUI();
         if (firstdayText.gameObject.activeSelf)
         {
             firstdayText.gameObject.SetActive(false); // Deactivate the text object
@@ -812,6 +902,10 @@ public class GameManager : MonoBehaviourPun
             playerVotingCanvas = null;
         }
         roleRevealText.text = "";
+        yield return new WaitForSeconds(10f);
+
+        // Update cycle UI after delay
+        UpdateCycleUI();
         // Vector3 canvasPosition = new Vector3(0, 0, 0); 
         // Quaternion canvasRotation = Quaternion.identity;
         // nightOptionsCanvas = PhotonNetwork.Instantiate(nightOptionsCanvasPrefab.name,canvasPosition, canvasRotation, 0 );
@@ -839,13 +933,41 @@ public class GameManager : MonoBehaviourPun
         {
             localPlayer.DisablePlayerControls();
         }
+        // while (nightCycleTimeRemaining > 0)
+        // {
+        //     timerText.text = $"{nightCycleTimeRemaining:F2}"; // Display the time remaining
+        //     yield return new WaitForSeconds(1f); // Update every second
+        //     nightCycleTimeRemaining -= 1f; // Decrease the time remaining by 1 second
+        // }
+
+        while (true)
+        {
+            // Calculate time remaining based on start time
+            double elapsed = PhotonNetwork.Time - nightCycleStartTime;
+            nightCycleTimeRemaining = nightCycleDuration - (float)elapsed;
+
+            // Update UI with the synchronized remaining time
+            if (nightCycleTimeRemaining > 0)
+            {
+                timerText.text = $"{nightCycleTimeRemaining:F2}";
+                yield return new WaitForSeconds(1f); // Update every second
+            }
+            else
+            {
+                // End the night cycle once time is up
+                timerText.text = "0.00";
+                break;
+            }
+        }
        
-        Invoke(nameof(StartDayCycle), 50f);
+        StartDayCycle();
 
     }
 
-    void StartDayCycle()
+    public IEnumerator DayCycleRoutine()
     {
+        SwitchToMainCamera(daySkybox);
+        Invoke(nameof(ReturnToPlayerCamera), 10f);
         isNightCycle = false;
         DayCycles += 1;
         UpdateCycleUI();
@@ -870,7 +992,7 @@ public class GameManager : MonoBehaviourPun
         //         player.GiveGold();
         //     }
         // }
-         foreach (PlayerController player in players)
+        foreach (PlayerController player in players)
         {
             if (player != null && !player.dead)
             {
@@ -884,10 +1006,69 @@ public class GameManager : MonoBehaviourPun
                 player.ClearNightActions();
             }
         }
-
+        //yield return new WaitForSeconds(10f);
         SpawnDayPlayers();
         CheckWinCondition();
-        StartVotingTimer();
+        while (true)
+        {
+            // Calculate time remaining based on start time
+            double elapsed = PhotonNetwork.Time - dayCycleStartTime;
+            float dayCycleTimeRemaining = dayCycleDuration - (float)elapsed;
+
+            // Update UI with the synchronized remaining time
+            if (dayCycleTimeRemaining > 0)
+            {
+                timerText.text = $"{dayCycleTimeRemaining:F2}";
+                yield return new WaitForSeconds(1f); // Update every second
+            }
+            else
+            {
+                // End the day cycle once time is up
+                timerText.text = "0.00";
+                break;
+            }
+        }
+
+        StartVotingTimer(); 
+    }
+
+    
+
+    void SwitchToMainCamera(Material skybox)
+    {
+        if (cameraAnimator != null)
+        {
+            cameraAnimator.SetTrigger("StartNightCycleTrigger"); 
+        }
+        if (lightsanimator != null)
+        {
+            lightsanimator.SetTrigger("StartLights"); 
+        }
+        RenderSettings.skybox = skybox;
+        mainCamera.enabled = true;
+
+        foreach (var player in players)
+        {
+            var playerCam = player.GetComponentInChildren<Camera>();
+            if (playerCam != null)
+            {
+                playerCam.enabled = false;
+            }
+        }
+    }
+
+    void ReturnToPlayerCamera()
+    {
+        mainCamera.enabled = false;
+
+        foreach (var player in players)
+        {
+            var playerCam = player.GetComponentInChildren<Camera>();
+            if (playerCam != null)
+            {
+                playerCam.enabled = true;
+            }
+        }
     }
 
     void SpawnDayPlayers()
@@ -909,7 +1090,8 @@ public class GameManager : MonoBehaviourPun
     }
     void StartVotingTimer()
     {
-        timeRemaining = timerDuration; // Reset the timer
+        //timeRemaining = timerDuration; // Reset the timer
+        votingStartTime = PhotonNetwork.Time;
     
         Debug.Log("Timer started for voting.");
     }
@@ -1087,7 +1269,7 @@ public class GameManager : MonoBehaviourPun
         // // Start coroutine to hide the message after a delay
         // if (!PhotonNetwork.IsMasterClient) return;
         // StartCoroutine(HideDeathMessageAndDestroyPlayer(playerId, 10f));
-         if (targetPlayer.photonView.Owner.CustomProperties.TryGetValue("Role", out object role))
+        if (targetPlayer.photonView.Owner.CustomProperties.TryGetValue("Role", out object role))
         {
             if (deathMessageText != null)
             {
@@ -1097,9 +1279,12 @@ public class GameManager : MonoBehaviourPun
 
             if (deathImage != null && deathImages.Count > 0)
             {
+                Sprite roleDeathImage = GetRoleDeathImage(role.ToString());
                 int randomIndex = UnityEngine.Random.Range(0, deathImages.Count);
                 deathImage.sprite = deathImages[randomIndex];
                 deathImage.gameObject.SetActive(true);
+                deathProfileImage.gameObject.SetActive(true);
+                deathProfileImage.sprite = roleDeathImage;
             }
 
             // Start coroutine to hide the message after a delay
@@ -1111,6 +1296,32 @@ public class GameManager : MonoBehaviourPun
         else
         {
             Debug.LogWarning("Role not found in player properties.");
+        }
+    }
+
+    private Sprite GetRoleDeathImage(string role)
+    {
+        // Check for the player's role and return the appropriate sprite
+        switch (role)
+        {
+            case "Mayor":
+                return mayorDeathImage; // Replace with the actual mayor image
+            case "Baker":
+                return bakerDeathImage; // Replace with the actual baker image
+            case "Villager":
+                return villagerDeathImage; // Replace with the actual villager image
+            case "Assistant":
+                return assistantDeathImage; // Replace with the actual assistant image
+            case "Medic":
+                return medicDeathImage; // Replace with the actual medic image
+            case "Detective":
+                return detectiveDeathImage; // Replace with the actual detective image
+            case "Clairvoyant":
+                return clairvoyantDeathImage; // Replace with the actual clairvoyant image
+            case "OldMan":
+                return oldManDeathImage; // Replace with the actual old man image
+            default:
+                return null; // Return null if no specific image is found for the role
         }
     }
 
@@ -1206,7 +1417,11 @@ public class GameManager : MonoBehaviourPun
         WinUIManager winUIManager = FindObjectOfType<WinUIManager>();
         if (winUIManager != null)
         {
+            Debug.Log("Showing Win screen");
             winUIManager.ShowWinUI(winningSideName, playerNames);
+        }
+        else {
+            Debug.Log("WinUI not found");
         }
 
         Invoke("GoBackToMenu", postGameTime);
