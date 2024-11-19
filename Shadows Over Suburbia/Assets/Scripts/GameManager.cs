@@ -97,6 +97,13 @@ public class GameManager : MonoBehaviourPun
     public Sprite medicDeathImage;
     public Sprite bakerDeathImage;
     //private Sprite currentProfilePicture;
+    public AudioSource timerAudio;
+    public AudioSource morningMusic;
+    public AudioSource nightMusic;
+    public AudioSource votingMusic;
+    public AudioSource daySounds;
+    public AudioSource nightSounds;
+
 
    
 
@@ -303,7 +310,7 @@ public class GameManager : MonoBehaviourPun
         if (!PhotonNetwork.IsMasterClient) return;
         totalPlayers = PhotonNetwork.CurrentRoom.PlayerCount;
 
-        if (totalPlayers < 1)
+        if (totalPlayers < 2)
         {
             Debug.Log("There are not enough players for this game.");
             SceneManager.LoadScene(sceneBuildIndex: 0);
@@ -549,6 +556,7 @@ public class GameManager : MonoBehaviourPun
                 Debug.Log("30 seconds elapsed. Starting night cycle.");
                 StartNightCycle(); // Start night cycle after 30 seconds
                 //votingStartTime = PhotonNetwork.Time;
+                timerAudio.Play();
                 firstDayStartTime = 0; // Reset the start time for next cycle
             }
             return;
@@ -568,6 +576,8 @@ public class GameManager : MonoBehaviourPun
             {
                 Debug.Log("Time is up! Start voting!");
                 StartVoting();
+                timerAudio.Play();
+                votingMusic.Play();
                 votingStartTime = 0f; // Reset after voting ends
             }
         }
@@ -885,11 +895,13 @@ public class GameManager : MonoBehaviourPun
     public IEnumerator NightCycleRoutine()
     {
         Debug.Log("Starting night cycle");
+        nightSounds.Play();
         SwitchToMainCamera(nightSkybox);
         Invoke(nameof(ReturnToPlayerCamera), 10f);
         isNightCycle = true;
         NightCycles += 1;
         ApplyPoisonEffects();
+        nightMusic.Play();
         if (firstdayText.gameObject.activeSelf)
         {
             firstdayText.gameObject.SetActive(false); // Deactivate the text object
@@ -967,6 +979,7 @@ public class GameManager : MonoBehaviourPun
     public IEnumerator DayCycleRoutine()
     {
         SwitchToMainCamera(daySkybox);
+        daySounds.Play();
         Invoke(nameof(ReturnToPlayerCamera), 10f);
         isNightCycle = false;
         DayCycles += 1;
@@ -1008,7 +1021,8 @@ public class GameManager : MonoBehaviourPun
         }
         //yield return new WaitForSeconds(10f);
         SpawnDayPlayers();
-        CheckWinCondition();
+        morningMusic.Play();
+        StartCoroutine(CheckWinCondition());
         while (true)
         {
             // Calculate time remaining based on start time
@@ -1063,10 +1077,22 @@ public class GameManager : MonoBehaviourPun
 
         foreach (var player in players)
         {
-            var playerCam = player.GetComponentInChildren<Camera>();
-            if (playerCam != null)
+            var photonView = player.GetComponent<PhotonView>();
+            if (photonView != null && photonView.IsMine)
             {
-                playerCam.enabled = true;
+                var playerCam = player.GetComponentInChildren<Camera>();
+                if (playerCam != null)
+                {
+                    playerCam.enabled = true;
+                }
+            }
+            else
+            {
+                var playerCam = player.GetComponentInChildren<Camera>();
+                if (playerCam != null)
+                {
+                    playerCam.enabled = false;
+                }
             }
         }
     }
@@ -1176,7 +1202,7 @@ public class GameManager : MonoBehaviourPun
             StartVoting(); // Start a new voting session
         }
 
-        //CheckWinCondition();
+        StartCoroutine(CheckWinCondition());
         votesProcessed = true;
 
     }
@@ -1466,92 +1492,165 @@ public class GameManager : MonoBehaviourPun
         NetworkManager.instance.ChangeScene("Title");
     }
 
-    void CheckWinCondition()
+    IEnumerator CheckWinCondition()
     {
+        if (!PhotonNetwork.IsMasterClient) yield break;
         bool hasHelpful = false;
         bool hasDestructive = false;
         bool oldManAlive = oldManPlayer != null && !oldManPlayer.dead;
         bool hasNeutral = false;
         if (isWinnerDeclared) // Early exit if a winner has been declared
         {
-            return;
+            yield break;
         }
 
         foreach (var player in PhotonNetwork.PlayerList)
         {
-            // if (GameManager.playerAlignments.TryGetValue(player.ActorNumber, out GameManager.Alignment alignment))
-            // {
-            //     if (alignment == GameManager.Alignment.Helpful)
-            //     {
-            //         hasHelpful = true;
-            //     }
-            //     else if (alignment == GameManager.Alignment.Destructive)
-            //     {
-            //         hasDestructive = true;
-            //     }
-            // }
-            if (player.CustomProperties.TryGetValue("Alignment", out object playerAlignment))
+            Debug.Log($"Checking player: {player.NickName}");
+            
+            if (player.CustomProperties.TryGetValue("Alignment", out object alignment))
             {
-                if (playerAlignment.ToString() == GameManager.Alignment.Helpful.ToString())
+                if (alignment.ToString() == GameManager.Alignment.Helpful.ToString())
                 {
                     hasHelpful = true;
+                    Debug.Log($"{player.NickName} is Helpful.");
                 }
-                else if (playerAlignment.ToString() == GameManager.Alignment.Destructive.ToString())
+                else if (alignment.ToString() == GameManager.Alignment.Destructive.ToString())
                 {
                     hasDestructive = true;
+                    Debug.Log($"{player.NickName} is Destructive.");
                 }
-                else if (playerAlignment.ToString() == GameManager.Alignment.Neutral.ToString())
+                else if (alignment.ToString() == GameManager.Alignment.Neutral.ToString())
                 {
                     hasNeutral = true;
+                    Debug.Log($"{player.NickName} is Neutral.");
                 }
+                Debug.Log($"{player.NickName}: Alignment = {alignment}");
             }
+            else
+            {
+                Debug.LogWarning($"{player.NickName}: Alignment property missing or not synchronized.");
+            }
+
+            // if (player.CustomProperties.TryGetValue("Alignment", out object alignment))
+            // {
+            //     Debug.Log($"{player.NickName}: Alignment = {alignment}");
+            // }
+            // else
+            // {
+            //     Debug.LogWarning($"{player.NickName}: Alignment property missing.");
+            //     //alignment = GameManager.Alignment.Neutral;
+            // }
+
+            // // Check alignment
+            // if (alignment.ToString() == GameManager.Alignment.Helpful.ToString())
+            // {
+            //     hasHelpful = true;
+            // }
+            // else if (alignment.ToString() == GameManager.Alignment.Destructive.ToString())
+            // {
+            //     hasDestructive = true;
+            // }
+            // else if (alignment.ToString() == GameManager.Alignment.Neutral.ToString())
+            // {
+            //     hasNeutral = true;
+            // }
         }
+        Debug.Log($"Alignment check complete. Helpful: {hasHelpful}, Destructive: {hasDestructive}, Old Man Alive: {oldManAlive}");
+        yield return new WaitForSeconds(2f); 
+        DetermineWinner(hasHelpful, hasDestructive, hasNeutral, oldManAlive);
+        // if (oldManPlayer != null && oldManPlayer.dead)
+        // {
+        //     Debug.Log("Old Man has died. Old Man wins!");
+        //     isWinnerDeclared = true;
+        //     photonView.RPC("WinGame", RpcTarget.All, (int)GameManager.Alignment.Neutral); // Declare Old Man (Neutral) as the winner
+        //     yield break; // Stop further win checks
+        // }
+
+        // // if (oldManAlive)
+        // // {
+        // //     Debug.Log("Old Man is still alive. No win for Helpful or Destructive yet.");
+        // //     return; // Don't declare a win yet
+        // // }
+
+        // if (hasHelpful && hasDestructive)
+        // {
+        //     Debug.Log("Both Helpful and Destructive sides are still alive. No winner yet.");
+        //     yield break; // No winner if both alignments are present
+        // }
+
+        // // Determine the winning side
+        // if (hasHelpful && !hasDestructive)
+        // {
+        //     Debug.Log("Helpful side wins!");
+        //     // Helpful side wins
+        //     isWinnerDeclared = true;
+        //     photonView.RPC("WinGame", RpcTarget.All, (int)GameManager.Alignment.Helpful);
+        // }
+        // if (hasDestructive && !hasHelpful)
+        // {
+        //     Debug.Log("Destructive side wins!");
+        //     // Destructive side wins
+        //     isWinnerDeclared = true;
+        //     photonView.RPC("WinGame", RpcTarget.All, (int)GameManager.Alignment.Destructive);
+        // }
+
+        // if (!hasHelpful && !hasDestructive && oldManPlayer != null && oldManPlayer.dead)
+        // {
+        //     Debug.Log("Old Man wins due to lack of competition!");
+        //     isWinnerDeclared = true;
+        //     photonView.RPC("WinGame", RpcTarget.All, (int)GameManager.Alignment.Neutral);
+        //     yield break;
+        // }
         
+
+        //     // If we reach this point, there may be no players left of either alignment
+        // Debug.Log("No clear winner yet."); 
+    }
+
+    void DetermineWinner(bool hasHelpful, bool hasDestructive, bool hasNeutral, bool oldManAlive)
+    {
         if (oldManPlayer != null && oldManPlayer.dead)
         {
             Debug.Log("Old Man has died. Old Man wins!");
             isWinnerDeclared = true;
-            photonView.RPC("WinGame", RpcTarget.All, (int)GameManager.Alignment.Neutral); // Declare Old Man (Neutral) as the winner
+            photonView.RPC("WinGame", RpcTarget.All, (int)GameManager.Alignment.Neutral); // Old Man wins
             return; // Stop further win checks
         }
 
-        if (oldManAlive)
+        if (hasHelpful && hasDestructive)
         {
-            Debug.Log("Old Man is still alive. No win for Helpful or Destructive yet.");
-            return; // Don't declare a win yet
+            Debug.Log("Both Helpful and Destructive sides are still alive. No winner yet.");
+            return; // No winner if both alignments are present
         }
 
         // Determine the winning side
         if (hasHelpful && !hasDestructive)
         {
-            // Helpful side wins
+            Debug.Log("Helpful side wins!");
             isWinnerDeclared = true;
             photonView.RPC("WinGame", RpcTarget.All, (int)GameManager.Alignment.Helpful);
+            return;
         }
-        else if (hasDestructive && !hasHelpful)
+
+        if (hasDestructive && !hasHelpful)
         {
-            // Destructive side wins
+            Debug.Log("Destructive side wins!");
             isWinnerDeclared = true;
             photonView.RPC("WinGame", RpcTarget.All, (int)GameManager.Alignment.Destructive);
+            return;
         }
-        // else if (!hasHelpful && !hasDestructive && oldManPlayer != null && oldManPlayer.dead)
-        // {
-        //     // If both sides are gone and Old Man is dead, declare a win for Old Man
-        //     isWinnerDeclared = true;
-        //     photonView.RPC("WinGame", RpcTarget.All, (int)GameManager.Alignment.Neutral);
-        // }
-        else
-        {
-            // Check if both sides are alive
-            if (hasHelpful && hasDestructive)
-            {
-                Debug.Log("Both Helpful and Destructive sides are still alive. No winner yet.");
-                return; // No win condition yet
-            }
 
-            // If we reach this point, there may be no players left of either alignment
-            Debug.Log("No clear winner yet.");
+        if (!hasHelpful && !hasDestructive && oldManPlayer != null && oldManPlayer.dead)
+        {
+            Debug.Log("Old Man wins due to lack of competition!");
+            isWinnerDeclared = true;
+            photonView.RPC("WinGame", RpcTarget.All, (int)GameManager.Alignment.Neutral);
+            return;
         }
+
+        // If no winner is determined
+        Debug.Log("No clear winner yet.");
     }
    
     // -=-=-

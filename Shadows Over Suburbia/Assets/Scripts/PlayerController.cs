@@ -7,6 +7,7 @@ using UnityEngine.UI;
 using TMPro;
 using System;
 using System.Linq;
+using UnityEngine.Audio;
 
 public class PlayerController : MonoBehaviourPun
 {
@@ -108,6 +109,10 @@ public class PlayerController : MonoBehaviourPun
     public Sprite bakerSprite;
     private Sprite currentProfilePicture;
 
+    public AudioMixer audioMixer; 
+    public Slider musicSlider;    
+    public Slider sfxSlider;
+
 
     //ITEMS
     public enum ItemType
@@ -191,6 +196,29 @@ public class PlayerController : MonoBehaviourPun
         TMP_Dropdown itemDropdown = localinventoryUIInstance.transform.Find("ItemDropdown").GetComponent<TMP_Dropdown>();
 
         useItemButton.onClick.AddListener(UseSelectedItem);
+
+        float musicVolume, sfxVolume;
+        audioMixer.GetFloat("MusicVolume", out musicVolume);
+        audioMixer.GetFloat("SFXVolume", out sfxVolume);
+
+        musicSlider.value = Mathf.Pow(10, musicVolume / 20); // Convert from dB to linear
+        sfxSlider.value = Mathf.Pow(10, sfxVolume / 20);
+
+        // Add listener to sliders
+        musicSlider.onValueChanged.AddListener(SetMusicVolume);
+        sfxSlider.onValueChanged.AddListener(SetSFXVolume);
+    }
+
+    public void SetMusicVolume(float value)
+    {
+        // Convert linear value to decibels and set the mixer parameter
+        audioMixer.SetFloat("MusicVolume", Mathf.Log10(value) * 20);
+    }
+
+    public void SetSFXVolume(float value)
+    {
+        // Convert linear value to decibels and set the mixer parameter
+        audioMixer.SetFloat("SFXVolume", Mathf.Log10(value) * 20);
     }
 
 
@@ -458,7 +486,7 @@ public class PlayerController : MonoBehaviourPun
                 playerControls.EnablePlayerControls();
             }
         }
-        if (Input.GetKeyDown(KeyCode.F1))
+        if (Input.GetKeyDown(KeyCode.LeftBracket))
         {
             ToggleAbilityCanvas();
         }
@@ -467,7 +495,7 @@ public class PlayerController : MonoBehaviourPun
         {
             ToggleSettings();
         }
-        if (Input.GetKeyDown(KeyCode.F3))
+        if (Input.GetKeyDown(KeyCode.RightBracket))
         {
             playerControls.ToggleCameraView();
         }
