@@ -28,7 +28,7 @@ https://assetstore.unity.com/packages/3d/characters/humanoids/fantasy/low-poly-s
 **11/25/24** 
 **What was done**
 - As a player, I want to see the current mouse sensitivity value so I can adjust it more accurately. (added a current text next to mouse sensitivity so the player knows what the mouse sensitivity is currently at)
-- 
+
 -As a player, I want the option to invert camera controls so I can play the game in a way that feels natural to me. (added an invert toggle to be able to invert the camera control)
 
 -As a player, I want clear text explaining that character models are cosmetic and don’t affect gameplay so I can make informed choices. (changed character selection text to "character model" and added text to say that this will not have an effect on the gameplay, it's just cosmetic to address some of the confusion.)
