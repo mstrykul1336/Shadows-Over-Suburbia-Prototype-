@@ -25,6 +25,89 @@ https://assetstore.unity.com/packages/3d/characters/low-poly-female-free-low-pol
 Goblin Model:
 https://assetstore.unity.com/packages/3d/characters/humanoids/fantasy/low-poly-stylized-cartoon-goblin-293432
 
+**11/25/24** 
+**What was done**
+- As a player, I want to see the current mouse sensitivity value so I can adjust it more accurately. (added a current text next to mouse sensitivity so the player knows what the mouse sensitivity is currently at)
+-As a player, I want the option to invert camera controls so I can play the game in a way that feels natural to me. (added an invert toggle to be able to invert the camera control)
+-As a player, I want clear text explaining that character models are cosmetic and don’t affect gameplay so I can make informed choices. (changed character selection text to "character model" and added text to say that this will not have an effect on the gameplay, it's just cosmetic to address some of the confusion.)
+-As a player, I want text in night and day cutscenes to clarify what’s happening in the game’s progression. (added text to the night and day cutscenes to hopefully make them a little more clear on what's happening.)
+-As a player, I want all roles to have final drawn images so the game feels polished and visually complete. (all roles have their final drawn images.)
+-As a player, I want the detective role implemented with its final image so I can enjoy a complete character experience. (the detective has their final drawn player image and has been implemented)
+-As a player, I want the medic role implemented with its final image so I can enjoy a complete character experience. (the medic has their final drawn player image and has been implemented)
+-As a player, I want the baker role implemented with its final image so I can enjoy a complete character experience. (the baker has their final drawn player image and has been implemented)
+-As a player, I want the game to recognize and declare winners so I can feel rewarded for achieving victory. (winning works now! yay!)
+-As a player, I want more time during the first day and extended day/night cycles so I can fully strategize and enjoy the gameplay (added more time to the first day time remaining, day cycle and night cycles)
+-As a player, I want a lore-filled intro scene with voiceover and subtitles to immerse me in the game’s universe. (Added a new intro sequence scene where WiggleBlorp explains the lore behind the universe, including voice over (done by me) and subtitles)
+-As a player, I want a basic tutorial with visual examples so I can understand the game mechanics before starting (Added in a basic tutorial in the intro scene for players to go over what the game is before playing with visual examples. )
+-As a player, I want art for WiggleBlorp to enhance the game’s visual appeal and bring the character to life. (Drew art for wiggleblorp and added that. )
+**To-Do: From user stories 4:**
+-As a player, I would like my camera controls to be inverted so that I have an easier time walking around the room. / As a player I would like my controls to be inverted. (will be adding in option to invert it)
+-As someone who likes having options for characters in a game, I would like some information on what's different about each character so I can weigh the pros and cons of each one. / As a new player, I would like to know more about the character types before selecting one. (will be adding in more lore about the roles and a disclaimer / info that the character selection screen is just for your character model) 
+-As a new player, I would like to know more of what is happening during the cut scenes. / As a new player I would like some more insight as to what the cutscene was for.
+-As a new player, I would like more time during the day cycle so that I have more time walk around and interact with players and NPCs. / As a player who is kinda slow, I would like some more time during both cycles to be able to think about what I want to do. (add more time) 
+-As a new player, I would like some sort of intro sequence to be able to understand what is going on.
+-As a confused player, I would like a tutorial mode so that I can figure out movement and UI before it is timed.
+-Tasks from me:
+-As a player who likes dramatic elements, I would like all roles to have their final drawn images. 
+-As a player who likes challenge and good code, I would like the winning and losing to work properly.
+-As a player who likes stories, I want to know the lore behind the game so I can better get into character. 
+-As a player who likes stories, I want to know the lore behind each of the characters so I can better understand their motives. 
+ 
+
+
+
+
+**11/18/24** **What was done**:
+
+-As a player, I want the lighting on the models in the model select screen to be brighter so that I can see the details of each model more clearly.( made the lighting more bright on the models in the model select screen)
+
+-As a player, I want the "F1" control to be updated to the left bracket key and reflected in the controls image so that the controls are easier to understand and use. (changed F1 to left bracket and updated the controls image )
+
+-As a player, I want the "F3" control to be updated to the right bracket key and reflected in the controls image so that the controls are easier to understand and use. (changed F3 to right bracket and updated the controls image )
+
+-As a player, I want separate audio groups for music and SFX with volume sliders in the settings menu so that I can customize my audio experience. (added in two audio groups, music and SFX whose volume can be controlled with sliders by the player in the settings menu)
+
+-As a player, I want music to play during the day cycle, night cycle, and voting time so that the game feels more immersive. (added in music to the day cycle, night cycle, and voting time)
+
+-added in sound effects for the timers going off, for the beginning of the night cycle animation and for the beginning of the day cycle animation
+
+-As a player, I want sound effects to play when timers go off so that I am clearly alerted to changes in game phases. (any other time timers go off, I made it play the timer sound effect)
+
+-made it so it checks photon view before switching back to player camera, just so you don't get someone else's camera. It appears to work and now you get your own camera when it switches from main to the player.
+
+-drew the old man's profile picture and implemented it into the game
+
+-drew the clairvoyant's profile picture and implemented it into the game
+
+-drew the villager's profile picture and implemented it into the game
+
+-drew the assistant's profile picture and implemented it into the game
+
+-drew sketches for the detective, Baker and medic and implemented those temporarily in the game until the drawings are complete
+
+-As a player, I want the profile pictures of the characters that won to appear on the winning screen so that I can see which characters were victorious. (profile pictures of the characters that won will show up on the winning screen now )
+
+-As a player, I want the names of the players that won to appear on the winning screen so that I can identify the winning participants (player names of the players that won show up on the winning screen )
+
+-I have implemented some new code to the win condition function, hopefully fixing winning. It needs to be tested more. I tested with it, but it does not like photon so it's a bit broken right now. It is not correctly getting the player alignments from the photon custom properties, even though other functions use it just fine.
+
+**To Do:**
+
+As a player that likes dramatic elements, I want the game to have music and sound effects so that it adds to the aesthetic.
+
+As a player that likes dramatic elements, I want all of the characters to have their profile picture images so the game has more world building.
+
+As a player that likes clean UI, I want the models on the select model screen to be in the right place.
+
+As a player that likes challenge, I want the winning and losing to flow better and work properly for the conditions it should.
+
+As a player that likes changing camera angles, I want to make sure that I am not changing someone else’s camera or using someone else’s camera in the game.
+
+As a player that likes fast paced games, I want there to be more options for killing or attacking other players.
+
+As a player that likes dramatic elements and winning, I want my profile picture and name to show up on the winning screen.
+
+As a player that uses WebGL builds, I want to change any of the F keys to new key binds because WebGL builds will open a new tab with F1 and the find bar with F3. (This will require changes to the control images and changes to the code to change these key binds)
 **11/11/24:**
 **What was done:**
 - created a how to play screen and added it into the how to play section of the title screen. It is now a graphic with more organized steps should it should be clearer to understand and pick up.
