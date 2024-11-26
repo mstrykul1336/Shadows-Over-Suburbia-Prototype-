@@ -884,8 +884,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -18.0587, y: -407.16}
-  m_SizeDelta: {x: 1865.8097, y: 200.32}
+  m_AnchoredPosition: {x: -220.3349, y: -407.16}
+  m_SizeDelta: {x: 1412.7706, y: 200.32}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &85918854
 MonoBehaviour:
@@ -8707,6 +8707,141 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 4960939237960816, guid: a3ae121968a00494fa4ca915d75a2be6, type: 3}
   m_PrefabInstance: {fileID: 603303186}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &620382160
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 620382161}
+  - component: {fileID: 620382163}
+  - component: {fileID: 620382162}
+  m_Layer: 5
+  m_Name: cutscene text
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &620382161
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 620382160}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 726547804}
+  m_RootOrder: 10
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0}
+  m_AnchorMax: {x: 0.5, y: 0}
+  m_AnchoredPosition: {x: -79, y: 901}
+  m_SizeDelta: {x: 200, y: 50}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &620382162
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 620382160}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_Material: {fileID: 0}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_RaycastTarget: 1
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_text: 
+  m_isRightToLeft: 0
+  m_fontAsset: {fileID: 11400000, guid: 5af540f117f9d894381ceaf7c7cde7fb, type: 2}
+  m_sharedMaterial: {fileID: -3240831706146622232, guid: 5af540f117f9d894381ceaf7c7cde7fb, type: 2}
+  m_fontSharedMaterials: []
+  m_fontMaterial: {fileID: 0}
+  m_fontMaterials: []
+  m_fontColor32:
+    serializedVersion: 2
+    rgba: 4279964545
+  m_fontColor: {r: 0.5058824, g: 0.07450981, b: 0.10588236, a: 1}
+  m_enableVertexGradient: 0
+  m_colorMode: 3
+  m_fontColorGradient:
+    topLeft: {r: 1, g: 1, b: 1, a: 1}
+    topRight: {r: 1, g: 1, b: 1, a: 1}
+    bottomLeft: {r: 1, g: 1, b: 1, a: 1}
+    bottomRight: {r: 1, g: 1, b: 1, a: 1}
+  m_fontColorGradientPreset: {fileID: 0}
+  m_spriteAsset: {fileID: 0}
+  m_tintAllSprites: 0
+  m_StyleSheet: {fileID: 0}
+  m_TextStyleHashCode: -1183493901
+  m_overrideHtmlColors: 0
+  m_faceColor:
+    serializedVersion: 2
+    rgba: 4294967295
+  m_fontSize: 90
+  m_fontSizeBase: 90
+  m_fontWeight: 400
+  m_enableAutoSizing: 0
+  m_fontSizeMin: 18
+  m_fontSizeMax: 72
+  m_fontStyle: 0
+  m_HorizontalAlignment: 2
+  m_VerticalAlignment: 256
+  m_textAlignment: 65535
+  m_characterSpacing: 0
+  m_wordSpacing: 0
+  m_lineSpacing: 0
+  m_lineSpacingMax: 0
+  m_paragraphSpacing: 0
+  m_charWidthMaxAdj: 0
+  m_enableWordWrapping: 1
+  m_wordWrappingRatios: 0.4
+  m_overflowMode: 0
+  m_linkedTextComponent: {fileID: 0}
+  parentLinkedComponent: {fileID: 0}
+  m_enableKerning: 1
+  m_enableExtraPadding: 0
+  checkPaddingRequired: 0
+  m_isRichText: 1
+  m_parseCtrlCharacters: 1
+  m_isOrthographic: 1
+  m_isCullingEnabled: 0
+  m_horizontalMapping: 0
+  m_verticalMapping: 0
+  m_uvLineOffset: 0
+  m_geometrySortingOrder: 0
+  m_IsTextObjectScaleStatic: 0
+  m_VertexBufferAutoSizeReduction: 0
+  m_useMaxVisibleDescender: 1
+  m_pageToDisplay: 1
+  m_margin: {x: -186.10815, y: 0, z: -320.10608, w: 0}
+  m_isUsingLegacyAnimationComponent: 0
+  m_isVolumetricText: 0
+  m_hasFontAssetChanged: 0
+  m_baseMaterial: {fileID: 0}
+  m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!222 &620382163
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 620382160}
+  m_CullTransparentMesh: 1
 --- !u!1 &622189219
 GameObject:
   m_ObjectHideFlags: 0
@@ -10316,6 +10451,7 @@ RectTransform:
   - {fileID: 1461283748}
   - {fileID: 223430243}
   - {fileID: 1858257000}
+  - {fileID: 620382161}
   m_Father: {fileID: 0}
   m_RootOrder: 47
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -18623,7 +18759,7 @@ MonoBehaviour:
   timeRemaining: 10
   players: []
   postGameTime: 30
-  firstDayTimeRemaining: 30
+  firstDayTimeRemaining: 40
   mayorspawn: {fileID: 1285461501}
   mayorbasementspawn: {fileID: 1956880537}
   firstdayText: {fileID: 1858257001}
@@ -18673,23 +18809,24 @@ MonoBehaviour:
   journalDisplayText: {fileID: 1156112083}
   deathImageDuration: 10
   nightCycleTimeRemaining: 50
-  dayCycleDuration: 60
-  nightCycleDuration: 60
+  dayCycleDuration: 90
+  nightCycleDuration: 90
   deathProfileImage: {fileID: 1328649500}
   mayorDeathImage: {fileID: 21300000, guid: aef82034696370148a5135379dca5a08, type: 3}
   villagerDeathImage: {fileID: 21300000, guid: c2dcb8c8ff54a9f418dff3ca2a4af0bd, type: 3}
   assistantDeathImage: {fileID: 21300000, guid: 32b3b63113549544888a8d3002171291, type: 3}
   clairvoyantDeathImage: {fileID: 21300000, guid: a6ed2716f2c24b44781bb836f3a76770, type: 3}
   oldManDeathImage: {fileID: 21300000, guid: b347ae8b24e8c00488e940d8e0b18dd9, type: 3}
-  detectiveDeathImage: {fileID: 21300000, guid: 6dd71cfecaeb7fc4ebd351483a64a64e, type: 3}
-  medicDeathImage: {fileID: 21300000, guid: a20bb41cdd2fca64a908815ea9a91218, type: 3}
-  bakerDeathImage: {fileID: 21300000, guid: 703a4ba82cb12f1439aa7199770b9d8a, type: 3}
+  detectiveDeathImage: {fileID: 21300000, guid: 082f9cc2bd0b0514e926ecf81b5fa1c7, type: 3}
+  medicDeathImage: {fileID: 21300000, guid: a28e8867449f7a84aa6c3fd3a63beb34, type: 3}
+  bakerDeathImage: {fileID: 21300000, guid: 70e799ec2e7f3cc449586d957c7a6c96, type: 3}
   timerAudio: {fileID: 414088853}
   morningMusic: {fileID: 1966370164}
   nightMusic: {fileID: 1420587779}
   votingMusic: {fileID: 500919955}
   daySounds: {fileID: 877568503}
   nightSounds: {fileID: 1076520401}
+  cutsceneText: {fileID: 620382162}
   playerCanvasPrefab: {fileID: 3603013420108256756, guid: ff8eb351e20db844a8edd62ac7be17d8, type: 3}
 --- !u!4 &1383217092
 Transform:
@@ -19312,10 +19449,10 @@ MonoBehaviour:
   assistantSprite: {fileID: 21300000, guid: 32b3b63113549544888a8d3002171291, type: 3}
   oldManSprite: {fileID: 21300000, guid: b347ae8b24e8c00488e940d8e0b18dd9, type: 3}
   clairvoyantSprite: {fileID: 21300000, guid: a6ed2716f2c24b44781bb836f3a76770, type: 3}
-  bakerSprite: {fileID: 21300000, guid: 703a4ba82cb12f1439aa7199770b9d8a, type: 3}
+  bakerSprite: {fileID: 21300000, guid: 70e799ec2e7f3cc449586d957c7a6c96, type: 3}
   villagerSprite: {fileID: 21300000, guid: c2dcb8c8ff54a9f418dff3ca2a4af0bd, type: 3}
-  DetectiveSprite: {fileID: 21300000, guid: 6dd71cfecaeb7fc4ebd351483a64a64e, type: 3}
-  medicSprite: {fileID: 21300000, guid: a20bb41cdd2fca64a908815ea9a91218, type: 3}
+  DetectiveSprite: {fileID: 21300000, guid: 082f9cc2bd0b0514e926ecf81b5fa1c7, type: 3}
+  medicSprite: {fileID: 21300000, guid: a28e8867449f7a84aa6c3fd3a63beb34, type: 3}
   playerNamePrefab: {fileID: 5160076845024225978, guid: c5c73e0027ceb354186a52f33a24576a, type: 3}
   playerNamesContainer: {fileID: 85918853}
 --- !u!1 &1433949395

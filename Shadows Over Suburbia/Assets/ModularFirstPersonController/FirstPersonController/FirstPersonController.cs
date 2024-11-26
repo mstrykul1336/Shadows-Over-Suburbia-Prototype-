@@ -10,6 +10,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using Photon.Pun;
 using Photon.Realtime;
+using TMPro;
 
 #if UNITY_EDITOR
     using UnityEditor;
@@ -23,6 +24,8 @@ public class FirstPersonController : MonoBehaviourPun
     public Camera firstPersonCamera;  
     public Camera thirdPersonCamera;
     private bool isFirstPerson = true;
+    public TextMeshProUGUI sensitvityNumber;
+    public Toggle invertCameraToggle; 
 
     #region Camera Movement Variables
 
@@ -225,7 +228,8 @@ public class FirstPersonController : MonoBehaviourPun
             sensitivitySlider.value = mouseSensitivity;
             sensitivitySlider.onValueChanged.AddListener(UpdateMouseSensitivity);
         }
-
+        invertCameraToggle.isOn = invertCamera;
+        invertCameraToggle.onValueChanged.AddListener(OnInvertCameraToggle);
         #endregion
     }
     private void DisableRemoteComponents()
@@ -249,6 +253,13 @@ public class FirstPersonController : MonoBehaviourPun
     void UpdateMouseSensitivity(float value)
     {
         mouseSensitivity = value;
+        sensitvityNumber.text = mouseSensitivity.ToString();
+    }
+
+    public void OnInvertCameraToggle(bool isToggled)
+    {
+        invertCamera = isToggled;
+        Debug.Log("Invert Camera: " + invertCamera);
     }
 
     public void ToggleCameraView()
@@ -679,6 +690,8 @@ public class FirstPersonController : MonoBehaviourPun
         fpc.maxLookAngle = EditorGUILayout.Slider(new GUIContent("Max Look Angle", "Determines the max and min angle the player camera is able to look."), fpc.maxLookAngle, 40, 90);
         GUI.enabled = true;
 
+        fpc.sensitvityNumber= (TextMeshProUGUI)EditorGUILayout.ObjectField(fpc.sensitvityNumber, typeof(TextMeshProUGUI), true);
+        fpc.invertCameraToggle = (Toggle)EditorGUILayout.ObjectField(fpc.invertCameraToggle, typeof(Toggle), true);
         fpc.lockCursor = EditorGUILayout.ToggleLeft(new GUIContent("Lock and Hide Cursor", "Turns off the cursor visibility and locks it to the middle of the screen."), fpc.lockCursor);
 
         fpc.crosshair = EditorGUILayout.ToggleLeft(new GUIContent("Auto Crosshair", "Determines if the basic crosshair will be turned on, and sets is to the center of the screen."), fpc.crosshair);

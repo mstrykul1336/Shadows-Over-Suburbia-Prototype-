@@ -212,11 +212,15 @@ public class Menu : MonoBehaviourPunCallbacks, ILobbyCallbacks
     public void OnCharacterSelectButton(int index)
     {
         selectedModelIndex = index;
-        Hashtable playerProperties = new Hashtable();
+        Hashtable playermodelProperties = new Hashtable
+        {
+            { "ModelIndex", selectedModelIndex }
+        };
        // playerProperties["characterModel"] = selectedModelIndex;
        // PhotonNetwork.LocalPlayer.SetCustomProperties(playerProperties);
-        playerProperties.Add("ModelIndex", selectedModelIndex);
-        PhotonNetwork.LocalPlayer.SetCustomProperties(playerProperties);
+        //playermodelProperties.Add("ModelIndex", selectedModelIndex);
+        PhotonNetwork.LocalPlayer.SetCustomProperties(playermodelProperties);
+        Debug.Log($"Updated ModelIndex to {selectedModelIndex} for player {PhotonNetwork.LocalPlayer.NickName}");
     }
 
     public void OnConfirmCharacterSelection()

@@ -23,7 +23,7 @@ public class Title : MonoBehaviour
     }
 
     public void OnPlayButton(){
-        SceneManager.LoadScene(sceneBuildIndex:1);
+        SceneManager.LoadScene(sceneBuildIndex:2);
     }
 
     public void OnRolesButton()

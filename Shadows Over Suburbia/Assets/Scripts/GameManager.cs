@@ -103,6 +103,7 @@ public class GameManager : MonoBehaviourPun
     public AudioSource votingMusic;
     public AudioSource daySounds;
     public AudioSource nightSounds;
+    public TextMeshProUGUI cutsceneText;
 
 
    
@@ -310,7 +311,7 @@ public class GameManager : MonoBehaviourPun
         if (!PhotonNetwork.IsMasterClient) return;
         totalPlayers = PhotonNetwork.CurrentRoom.PlayerCount;
 
-        if (totalPlayers < 2)
+        if (totalPlayers < 1)
         {
             Debug.Log("There are not enough players for this game.");
             SceneManager.LoadScene(sceneBuildIndex: 0);
@@ -367,12 +368,16 @@ public class GameManager : MonoBehaviourPun
         }
 
         Shuffle(roles); // Shuffle the roles to randomize assignments
-        
+        int index = 0;
         // Assign the roles to the players
-        foreach (var player in PhotonNetwork.CurrentRoom.Players)
+        foreach (var playerEntry in PhotonNetwork.CurrentRoom.Players)
         {
-            int playerId = player.Key;
-            Role assignedRole = roles[playerId - 1]; 
+           // int playerId = player.Key;
+           //Role assignedRole = roles[playerId - 1]; 
+            int playerId = playerEntry.Key; // Use ActorNumber as the ID
+            Player player = playerEntry.Value; // Get the Player object
+
+            Role assignedRole = roles[index];
            //Alignment randomAlignment = RandomizeAlignment();
             Alignment assignedAlignment = (assignedRole == Role.OldMan) ? Alignment.Neutral : RandomizeAlignment();
 
@@ -380,11 +385,29 @@ public class GameManager : MonoBehaviourPun
             playerAlignments[playerId] = assignedAlignment;
 
             // Send the role to the player
-            SetPlayerProperties(player.Value.NickName, assignedRole.ToString(), assignedAlignment.ToString());
-            photonView.RPC("ReceiveRoleandAlignment", player.Value, assignedRole, assignedAlignment);
+            PhotonHashtable playerProperties = new PhotonHashtable
+            {
+                { "PlayerName", player.NickName },
+                { "Role", assignedRole.ToString() },
+                { "Alignment", assignedAlignment.ToString() }
+                //{ "ModelIndex", selectedModelIndex }
+            };
+
+            // Setting player properties in Photon
+            player.SetCustomProperties(playerProperties);
+            //Debug.Log($"Player Name: {playerName}, Role: {role}, Alignment: {alignment}");
+            photonView.RPC("ReceiveRoleandAlignment", player, assignedRole, assignedAlignment);
+            Debug.Log($"Assigned Role: {assignedRole}, Alignment: {assignedAlignment} for Player: {player}");
+            StartCoroutine(DelayedGetProperties(player));
+            index++;
         }
 
        
+    }
+    private IEnumerator DelayedGetProperties(Player player)
+    {
+        yield return new WaitForSeconds(1f);  // Add a delay to allow properties to sync
+        GetPlayerProperties(player);
     }
 
   
@@ -405,27 +428,37 @@ public class GameManager : MonoBehaviourPun
         return (randomValue == 0) ? Alignment.Destructive : Alignment.Helpful;
     }
 
-    public void SetPlayerProperties(string playerName, string role, string alignment)
-    {
-        PhotonHashtable playerProperties = new PhotonHashtable
-        {
-            { "PlayerName", playerName },
-            { "Role", role },
-            { "Alignment", alignment }
-        };
+    // public void SetPlayerProperties(string playerName, string role, string alignment)
+    // {
+    //     PhotonHashtable playerProperties = new PhotonHashtable
+    //     {
+    //         { "PlayerName", playerName },
+    //         { "Role", role },
+    //         { "Alignment", alignment }
+    //         //{ "ModelIndex", selectedModelIndex }
+    //     };
 
-        // Setting player properties in Photon
-        PhotonNetwork.LocalPlayer.SetCustomProperties(playerProperties);
-        Debug.Log($"Player Name: {playerName}, Role: {role}, Alignment: {alignment}");
-    }
+    //     // Setting player properties in Photon
+    //     PhotonNetwork.LocalPlayer.SetCustomProperties(playerProperties);
+    //     Debug.Log($"Player Name: {playerName}, Role: {role}, Alignment: {alignment}");
+    // }
 
     public void GetPlayerProperties(Player player)
     {
+         foreach (var property in player.CustomProperties)
+        {
+            Debug.Log($"Property Key: {property.Key}, Value: {property.Value}");
+        }
+
         if (player.CustomProperties.TryGetValue("PlayerName", out object playerName) &&
             player.CustomProperties.TryGetValue("Role", out object role) &&
             player.CustomProperties.TryGetValue("Alignment", out object alignment))
         {
-            Debug.Log($"Player Name: {playerName}, Role: {role}, Alignment: {alignment}");
+            Debug.Log($"Get Player Name: {playerName}, Role: {role}, Alignment: {alignment}");
+        }
+        else
+        {
+            Debug.LogWarning("One or more properties are missing.");
         }
     }
 
@@ -897,6 +930,7 @@ public class GameManager : MonoBehaviourPun
         Debug.Log("Starting night cycle");
         nightSounds.Play();
         SwitchToMainCamera(nightSkybox);
+        cutsceneText.text = "The night falls!";
         Invoke(nameof(ReturnToPlayerCamera), 10f);
         isNightCycle = true;
         NightCycles += 1;
@@ -913,8 +947,8 @@ public class GameManager : MonoBehaviourPun
             Destroy(playerVotingCanvas);
             playerVotingCanvas = null;
         }
-        roleRevealText.text = "";
         yield return new WaitForSeconds(10f);
+        cutsceneText.text = "";
 
         // Update cycle UI after delay
         UpdateCycleUI();
@@ -979,6 +1013,7 @@ public class GameManager : MonoBehaviourPun
     public IEnumerator DayCycleRoutine()
     {
         SwitchToMainCamera(daySkybox);
+        cutsceneText.text = "The day awakens!";
         daySounds.Play();
         Invoke(nameof(ReturnToPlayerCamera), 10f);
         isNightCycle = false;
@@ -1017,6 +1052,7 @@ public class GameManager : MonoBehaviourPun
                 player.NightUIOff();
                 //clear the actions list for detective
                 player.ClearNightActions();
+                cutsceneText.text = "";
             }
         }
         //yield return new WaitForSeconds(10f);
