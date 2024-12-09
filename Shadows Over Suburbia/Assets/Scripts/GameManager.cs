@@ -878,7 +878,7 @@ public class GameManager : MonoBehaviourPun
             
 
             // Teleport remaining players
-            StartNightCycle();
+            StartCoroutine(EndVotingNight());
         }
     
     // Reset for next voting session
@@ -891,6 +891,16 @@ public class GameManager : MonoBehaviourPun
         
         // After the delay, call EndVoting
         EndVoting();
+        //StartVotingPhase();
+    }
+
+    private IEnumerator EndVotingNight()
+    {
+        // Wait for 30 seconds
+        yield return new WaitForSeconds(10f);
+        
+        // After the delay, call EndVoting
+        StartNightCycle();
         //StartVotingPhase();
     }
 

@@ -79,6 +79,7 @@ MonoBehaviour:
   - StartNightCycleSync
   - StartDayCycleSync
   - UpdatePlayerList
+  - TakeAttackDamage
   DisableAutoOpenWizard: 1
   ShowSettings: 1
   DevRegionSetOnce: 1

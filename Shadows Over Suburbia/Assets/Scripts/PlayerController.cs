@@ -41,6 +41,7 @@ public class PlayerController : MonoBehaviourPun
     public Ability playerAbility { get; private set; }
     private TMP_Dropdown itemDropdown;
     private Button UseItemButton;
+    public Button playerAttackButton;
     //public TMP_Dropdown attackDropdown; 
     public GameObject attackDropdownUI; 
     //public Button attackButtonknife;
@@ -57,6 +58,7 @@ public class PlayerController : MonoBehaviourPun
     public Button Psychicsbutton;
     public TMP_Dropdown playerDropdown1;
     public TMP_Dropdown playerDropdown2;
+    public TMP_Dropdown attackplayerDropdown;
     public TextMeshProUGUI investigateText;
     private PlayerController playerToInvestigate = null;
 
@@ -167,6 +169,7 @@ public class PlayerController : MonoBehaviourPun
         // }
         //currentHearts = maxHearts;
         poisonButton.onClick.AddListener(HandleAttack);
+        playerAttackButton.onClick.AddListener(HandlePlayerAttack);
         vilattackButton.onClick.AddListener(HandleVilAttack);
         healButton.onClick.AddListener(HandleHeal);
         takeToBasementButton.onClick.AddListener(TakeToBasement);
@@ -239,6 +242,25 @@ public class PlayerController : MonoBehaviourPun
         }
 
         playerDropdown.AddOptions(options);
+    }
+
+    public void PopulateAttackPlayerDropdown()
+    {
+        attackplayerDropdown.ClearOptions();  // Clear any existing options
+        Debug.Log("PopulatePlayerDropdown called!");
+        var options = new List<string>();
+
+        foreach (PlayerController player in GameManager.instance.players)
+        {
+            // Exclude the local player and dead players from the dropdown
+            if (player != null && !player.photonView.IsMine && !player.dead)
+            {
+                options.Add(player.photonPlayer.NickName); 
+                Debug.Log("Added player: " + player.photonPlayer.NickName);// Add player name to options
+            }
+        }
+
+        attackplayerDropdown.AddOptions(options);
     }
 
     public void PopulatePlayerPsychicDropdown()
@@ -535,6 +557,10 @@ public class PlayerController : MonoBehaviourPun
             healButton.gameObject.SetActive(true); 
             playerDropdown.gameObject.SetActive(true); // Activate the heal button only for the Medic
             PopulateLocalPlayerDropdown();  // Populate the dropdown with valid players
+            playerAttackButton.gameObject.SetActive(true);
+            //playerDropdown.gameObject.SetActive(true);  
+            attackplayerDropdown.gameObject.SetActive(true);
+            PopulateAttackPlayerDropdown();
         }
 
         else if (playerRole == GameManager.Role.Mayor) 
@@ -542,6 +568,10 @@ public class PlayerController : MonoBehaviourPun
             takeToBasementButton.gameObject.SetActive(true); 
             playerDropdown.gameObject.SetActive(true);
             PopulatePlayerDropdown(); 
+            playerAttackButton.gameObject.SetActive(true);
+            //playerDropdown.gameObject.SetActive(true);  
+            attackplayerDropdown.gameObject.SetActive(true);
+            PopulateAttackPlayerDropdown();
             
         }
         else if (playerRole == GameManager.Role.Baker)  // Change this to your desired role
@@ -549,6 +579,10 @@ public class PlayerController : MonoBehaviourPun
             poisonButton.gameObject.SetActive(true);
             playerDropdown.gameObject.SetActive(true); 
             PopulatePlayerDropdown(); 
+            playerAttackButton.gameObject.SetActive(true);
+            //playerDropdown.gameObject.SetActive(true);  
+            attackplayerDropdown.gameObject.SetActive(true);
+            PopulateAttackPlayerDropdown();
             
         }
         else if (playerRole == GameManager.Role.Villager)  
@@ -564,7 +598,11 @@ public class PlayerController : MonoBehaviourPun
             investigateText.gameObject.SetActive(true);
             playerDropdown.gameObject.SetActive(true); 
             investigateText.gameObject.SetActive(true); 
-            PopulatePlayerDropdown(); 
+            PopulatePlayerDropdown();
+            playerAttackButton.gameObject.SetActive(true);
+            //playerDropdown.gameObject.SetActive(true);  
+            attackplayerDropdown.gameObject.SetActive(true);
+            PopulateAttackPlayerDropdown();
             
         }
         else if (playerRole == GameManager.Role.Clairvoyant)  
@@ -574,6 +612,10 @@ public class PlayerController : MonoBehaviourPun
             playerDropdown1.gameObject.SetActive(true);  
             playerDropdown2.gameObject.SetActive(true);   
             PopulatePlayerPsychicDropdown();
+            playerAttackButton.gameObject.SetActive(true);
+            //playerDropdown.gameObject.SetActive(true);  
+            attackplayerDropdown.gameObject.SetActive(true);
+            PopulateAttackPlayerDropdown();
         }
         else if (playerRole == GameManager.Role.Assistant)  
         {
@@ -581,6 +623,17 @@ public class PlayerController : MonoBehaviourPun
             connectionsText.gameObject.SetActive(true);
             playerDropdown.gameObject.SetActive(true);   
             PopulatePlayerDropdown(); 
+            playerAttackButton.gameObject.SetActive(true);
+            //playerDropdown.gameObject.SetActive(true);  
+            attackplayerDropdown.gameObject.SetActive(true);
+            PopulateAttackPlayerDropdown();
+        }
+        else if (playerRole == GameManager.Role.OldMan) 
+        {
+            playerAttackButton.gameObject.SetActive(true);
+            //playerDropdown.gameObject.SetActive(true);  
+            attackplayerDropdown.gameObject.SetActive(true);
+            PopulateAttackPlayerDropdown();
         }
         
     }
@@ -689,6 +742,35 @@ public class PlayerController : MonoBehaviourPun
         }
         
     }
+
+    [PunRPC]
+    public void TakeAttackDamage(int damageinQuarters)
+    {
+        if (dead)
+            return;
+        if (isProtected)
+        {
+            Debug.Log($"{photonPlayer.NickName} is protected by a shield. No damage taken.");
+            ChatManager.DisplayLocalMessage($"{photonPlayer.NickName} is protected by a shield. No damage taken.");
+            isProtected = false; // Remove shield protection after blocking one attack
+            return;
+        }
+        Debug.Log($"Attack damage taken by {photonPlayer.NickName}");
+        ChatManager.DisplayLocalMessage($"Attack damage taken by {photonPlayer.NickName}");
+        currentHearts -= ((float)damageinQuarters / 4);
+
+        if (healthUI != null)
+        {
+            healthUI.UpdateHealthUI();
+        }
+
+        if (currentHearts <= 0)
+        {
+            currentHearts = 0;
+            HandlePlayerDeath();
+        }
+        
+    }
     [PunRPC]
     public void GiveGold()
     {
@@ -779,6 +861,35 @@ public class PlayerController : MonoBehaviourPun
         }
     }
 
+    private void HandlePlayerAttack()
+    {
+        if (attackplayerDropdown.options.Count == 0 || attackplayerDropdown.value < 0)
+        {
+            Debug.Log("No valid player selected to attack.");
+            return;  // No valid players to attack
+        }
+        string selectedPlayerName = attackplayerDropdown.options[attackplayerDropdown.value].text;
+        if (hasAttacked)
+        {
+            Debug.Log("You can only attack once");
+            return;
+        }
+        foreach (var player in GameManager.instance.players)
+        {
+            if (player != null && player.photonPlayer.NickName == selectedPlayerName)
+            {
+                // Call attack on the selected player
+                hasAttacked = true;
+                playerAttackButton.gameObject.SetActive(false);
+                RecordAction($"Attacked {selectedPlayerName}");
+                photonView.RPC("Attack", RpcTarget.All, player.photonPlayer);
+                photonView.RPC("NotifyAttack", RpcTarget.All,  player.photonView.Owner);
+                attackplayerDropdown.gameObject.SetActive(false);
+                break;
+            }
+        }
+    }
+
     private void HandleVilAttack()
     {
         if (playerDropdown.options.Count == 0 || playerDropdown.value < 0)
@@ -803,6 +914,7 @@ public class PlayerController : MonoBehaviourPun
                 photonView.RPC("Attack", RpcTarget.All, player.photonPlayer);
                 photonView.RPC("NotifyAttack", RpcTarget.All, player.photonView.Owner);
                 playerDropdown.gameObject.SetActive(false);
+               
                 break;
             }
         }
@@ -1006,12 +1118,13 @@ public class PlayerController : MonoBehaviourPun
     [PunRPC]
     public void Attack(Player photonPlayer)
     {
+        if (!PhotonNetwork.IsMasterClient) return;
         foreach (var player in GameManager.instance.players)
         {
             if (player != null && player.photonPlayer == photonPlayer)
             {
                 Debug.Log($"Attacking {player.photonPlayer.NickName}");
-                player.photonView.RPC("TakePoisonDamage", RpcTarget.All, 1); 
+                player.photonView.RPC("TakeAttackDamage", photonPlayer, 1); 
                 break;
             }
         }
@@ -1020,6 +1133,7 @@ public class PlayerController : MonoBehaviourPun
     [PunRPC]
     public void Poison(Player photonPlayer)
     {
+        if (!PhotonNetwork.IsMasterClient) return;
         // if (photonPlayer == photonView.Owner) // Ensure this is the correct player
         // {
         //     Debug.Log($"Poisoning {photonPlayer.NickName}");
